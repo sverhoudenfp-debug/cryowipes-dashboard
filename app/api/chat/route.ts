@@ -19,65 +19,69 @@ async function getShopifyToken() {
   return data.access_token;
 }
 
-async function getShopifyData(token: string) {
-  const res = await fetch(`https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/api/2024-01/orders.json?status=any&limit=50`, {
-    headers: { 'X-Shopify-Access-Token': token },
-  });
-  const data = await res.json();
-  return data.orders || [];
-}
-
-async function getMetaData() {
-  const accountId = 'act_1315459333262567';
-  const token = process.env.META_ACCESS_TOKEN;
-  const res = await fetch(
-    `https://graph.facebook.com/v20.0/${accountId}/campaigns?fields=name,status,daily_budget,lifetime_budget&access_token=${token}`
-  );
-  const campaigns = await res.json();
-
-  const insightsRes = await fetch(
-    `https://graph.facebook.com/v20.0/${accountId}/insights?fields=spend,impressions,clicks,ctr,cpc,actions&date_preset=last_7d&access_token=${token}`
-  );
-  const insights = await insightsRes.json();
-  return { campaigns: campaigns.data || [], insights: insights.data || [] };
-}
-
-const systemPrompt = `Je bent de AI manager voor CryoWipes (cryowipes.store), een cooling skincare webshop van Silivjn.
-Je kan helpen met ads, Shopify statistieken, SEO en social media.
-Antwoord altijd in het Nederlands. Wees direct en concreet.`;
-
 export async function POST(request: NextRequest) {
   try {
     const { messages } = await request.json();
 
-    let shopifyContext = '';
-    let metaContext = '';
+    const token = await getShopifyToken();
+    const headers = { 'X-Shopify-Access-Token': token };
+    const base = `https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/api/2024-01`;
 
-    try {
-      const token = await getShopifyToken();
-      const orders = await getShopifyData(token);
-      const totalRevenue = orders.reduce((sum: number, o: any) => sum + parseFloat(o.total_price || '0'), 0);
-      const aov = orders.length > 0 ? totalRevenue / orders.length : 0;
-      shopifyContext = `\n\nLIVE SHOPIFY DATA:\n- Orders: ${orders.length}\n- Omzet: €${totalRevenue.toFixed(2)}\n- AOV: €${aov.toFixed(2)}`;
-    } catch (e) {
-      shopifyContext = '\n\n(Shopify data tijdelijk niet beschikbaar)';
-    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    try {
-      const meta = await getMetaData();
-      const spend = meta.insights[0]?.spend || '0';
-      const impressions = meta.insights[0]?.impressions || '0';
-      const clicks = meta.insights[0]?.clicks || '0';
-      const ctr = meta.insights[0]?.ctr || '0';
-      metaContext = `\n\nLIVE META ADS DATA (laatste 7 dagen):\n- Campagnes: ${meta.campaigns.length}\n- Spend: €${spend}\n- Impressies: ${impressions}\n- Clicks: ${clicks}\n- CTR: ${parseFloat(ctr).toFixed(2)}%`;
-    } catch (e) {
-      metaContext = '\n\n(Meta Ads data tijdelijk niet beschikbaar)';
-    }
+    const [ordersRes, productsRes, customersRes] = await Promise.all([
+      fetch(`${base}/orders.json?status=any&limit=250`, { headers }),
+      fetch(`${base}/products.json?limit=50`, { headers }),
+      fetch(`${base}/customers.json?limit=50`, { headers }),
+    ]);
+
+    const [ordersData, productsData, customersData] = await Promise.all([
+      ordersRes.json(),
+      productsRes.json(),
+      customersRes.json(),
+    ]);
+
+    const orders = ordersData.orders || [];
+    const products = productsData.products || [];
+    const customers = customersData.customers || [];
+
+    const todayOrders = orders.filter((o: any) => new Date(o.created_at) >= today);
+    const todayRevenue = todayOrders.reduce((sum: number, o: any) => sum + parseFloat(o.total_price || '0'), 0);
+    const totalRevenue = orders.reduce((sum: number, o: any) => sum + parseFloat(o.total_price || '0'), 0);
+    const aov = orders.length > 0 ? totalRevenue / orders.length : 0;
+
+    const metaRes = await fetch(
+      `https://graph.facebook.com/v20.0/act_1315459333262567/insights?fields=spend,impressions,clicks,ctr,actions&date_preset=last_7d&access_token=${process.env.META_ACCESS_TOKEN}`
+    );
+    const metaData = await metaRes.json();
+    const meta = metaData.data?.[0] || {};
+
+    const systemPrompt = `Je bent de AI manager voor CryoWipes (cryowipes.store), een cooling skincare webshop van Silivjn.
+
+LIVE SHOPIFY DATA (nu):
+- Totale omzet: €${totalRevenue.toFixed(2)}
+- Totaal orders: ${orders.length}
+- Gemiddelde orderwaarde: €${aov.toFixed(2)}
+- Orders vandaag: ${todayOrders.length}
+- Omzet vandaag: €${todayRevenue.toFixed(2)}
+- Totaal producten: ${products.length}
+- Producten: ${products.map((p: any) => `${p.title} (€${p.variants?.[0]?.price})`).join(', ')}
+- Totaal klanten: ${customers.length}
+- Recente orders: ${orders.slice(0, 5).map((o: any) => `${o.name} - €${o.total_price} - ${o.created_at.split('T')[0]}`).join(', ')}
+
+LIVE META ADS DATA (laatste 7 dagen):
+- Spend: €${meta.spend || '0'}
+- Impressies: ${meta.impressions || '0'}
+- Clicks: ${meta.clicks || '0'}
+- CTR: ${meta.ctr ? parseFloat(meta.ctr).toFixed(2) : '0'}%
+
+Antwoord altijd in het Nederlands. Wees direct en concreet. Gebruik de live data hierboven om vragen te beantwoorden.`;
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1024,
-      system: systemPrompt + shopifyContext + metaContext,
+      system: systemPrompt,
       messages,
     });
 
