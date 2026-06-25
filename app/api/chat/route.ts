@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
     const token = await getShopifyToken();
     const headers = { 'X-Shopify-Access-Token': token };
     const base = `https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/api/2024-01`;
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -52,31 +51,39 @@ export async function POST(request: NextRequest) {
     const aov = orders.length > 0 ? totalRevenue / orders.length : 0;
 
     const metaRes = await fetch(
-      `https://graph.facebook.com/v20.0/act_1315459333262567/insights?fields=spend,impressions,clicks,ctr,actions&date_preset=last_7d&access_token=${process.env.META_ACCESS_TOKEN}`
+      `https://graph.facebook.com/v20.0/act_1315459333262567/insights?fields=spend,impressions,clicks,ctr&date_preset=last_7d&access_token=${process.env.META_ACCESS_TOKEN}`
     );
     const metaData = await metaRes.json();
     const meta = metaData.data?.[0] || {};
 
     const systemPrompt = `Je bent de AI manager voor CryoWipes (cryowipes.store), een cooling skincare webshop van Silivjn.
 
-LIVE SHOPIFY DATA (nu):
+Je hebt twee modi:
+1. ANALYSEREN - data bekijken en uitleggen
+2. ACTIES VOORSTELLEN - concrete wijzigingen voorstellen die de gebruiker kan goedkeuren
+
+LIVE SHOPIFY DATA:
 - Totale omzet: $${totalRevenue.toFixed(2)}
 - Totaal orders: ${orders.length}
-- Gemiddelde orderwaarde: $${aov.toFixed(2)}
+- AOV: $${aov.toFixed(2)}
 - Orders vandaag: ${todayOrders.length}
 - Omzet vandaag: $${todayRevenue.toFixed(2)}
-- Totaal producten: ${products.length}
-- Producten: ${products.map((p: any) => `${p.title} ($${p.variants?.[0]?.price})`).join(', ')}
-- Totaal klanten: ${customers.length}
-- Recente orders: ${orders.slice(0, 5).map((o: any) => `${o.name} - $${o.total_price} - ${o.created_at.split('T')[0]}`).join(', ')}
+- Producten: ${products.map((p: any) => `${p.title} (ID: ${p.id}, variant ID: ${p.variants?.[0]?.id}, prijs: $${p.variants?.[0]?.price}, voorraad: ${p.variants?.reduce((s: number, v: any) => s + (v.inventory_quantity || 0), 0)})`).join(' | ')}
+- Klanten: ${customers.length}
 
-LIVE META ADS DATA (laatste 7 dagen):
+LIVE META ADS:
 - Spend: $${meta.spend || '0'}
 - Impressies: ${meta.impressions || '0'}
 - Clicks: ${meta.clicks || '0'}
 - CTR: ${meta.ctr ? parseFloat(meta.ctr).toFixed(2) : '0'}%
 
-Antwoord altijd in het Nederlands. Wees direct en concreet. Gebruik de live data hierboven om vragen te beantwoorden.`;
+Als je een actie wil voorstellen, sluit je antwoord dan af met een JSON blok in dit exacte formaat:
+ACTION_JSON:{"type":"update_product_title","description":"Verander de titel van [product] naar [nieuwe titel]","payload":{"product_id":123,"new_title":"Nieuwe Titel"}}
+
+Of voor prijs:
+ACTION_JSON:{"type":"update_product_price","description":"Verander de prijs van [product] naar $XX","payload":{"variant_id":123,"new_price":"XX.00"}}
+
+Antwoord altijd in het Nederlands. Wees direct en concreet.`;
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
@@ -90,7 +97,18 @@ Antwoord altijd in het Nederlands. Wees direct en concreet. Gebruik de live data
       .map((b: any) => b.text)
       .join('');
 
-    return NextResponse.json({ content: text });
+    // Parse action uit het antwoord
+    let action = null;
+    const actionMatch = text.match(/ACTION_JSON:({.*})/);
+    if (actionMatch) {
+      try {
+        action = JSON.parse(actionMatch[1]);
+      } catch {}
+    }
+
+    const cleanText = text.replace(/ACTION_JSON:{.*}/, '').trim();
+
+    return NextResponse.json({ content: cleanText, action });
   } catch (error: any) {
     return NextResponse.json({ content: 'Er ging iets mis: ' + error.message }, { status: 500 });
   }
