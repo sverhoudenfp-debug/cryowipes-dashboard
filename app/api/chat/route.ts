@@ -50,17 +50,23 @@ export async function POST(request: NextRequest) {
     const totalRevenue = orders.reduce((sum: number, o: any) => sum + parseFloat(o.total_price || '0'), 0);
     const aov = orders.length > 0 ? totalRevenue / orders.length : 0;
 
-    const metaRes = await fetch(
-      `https://graph.facebook.com/v20.0/act_1315459333262567/insights?fields=spend,impressions,clicks,ctr&date_preset=last_7d&access_token=${process.env.META_ACCESS_TOKEN}`
-    );
-    const metaData = await metaRes.json();
-    const meta = metaData.data?.[0] || {};
+    const metaToken = process.env.META_ACCESS_TOKEN;
+    const [metaInsightsRes, metaCampaignsRes] = await Promise.all([
+      fetch(`https://graph.facebook.com/v20.0/act_1315459333262567/insights?fields=spend,impressions,clicks,ctr&date_preset=last_7d&access_token=${metaToken}`),
+      fetch(`https://graph.facebook.com/v20.0/act_1315459333262567/campaigns?fields=id,name,status,daily_budget,lifetime_budget&access_token=${metaToken}`),
+    ]);
+
+    const [metaInsightsData, metaCampaignsData] = await Promise.all([
+      metaInsightsRes.json(),
+      metaCampaignsRes.json(),
+    ]);
+
+    const meta = metaInsightsData.data?.[0] || {};
+    const campaigns = metaCampaignsData.data || [];
 
     const systemPrompt = `Je bent de AI manager voor CryoWipes (cryowipes.store), een cooling skincare webshop van Silivjn.
 
-Je hebt twee modi:
-1. ANALYSEREN - data bekijken en uitleggen
-2. ACTIES VOORSTELLEN - concrete wijzigingen voorstellen die de gebruiker kan goedkeuren
+Je kan data analyseren EN acties voorstellen die de gebruiker kan goedkeuren.
 
 LIVE SHOPIFY DATA:
 - Totale omzet: $${totalRevenue.toFixed(2)}
@@ -71,17 +77,27 @@ LIVE SHOPIFY DATA:
 - Producten: ${products.map((p: any) => `${p.title} (ID: ${p.id}, variant ID: ${p.variants?.[0]?.id}, prijs: $${p.variants?.[0]?.price}, voorraad: ${p.variants?.reduce((s: number, v: any) => s + (v.inventory_quantity || 0), 0)})`).join(' | ')}
 - Klanten: ${customers.length}
 
-LIVE META ADS:
+LIVE META ADS DATA (laatste 7 dagen):
 - Spend: $${meta.spend || '0'}
 - Impressies: ${meta.impressions || '0'}
 - Clicks: ${meta.clicks || '0'}
 - CTR: ${meta.ctr ? parseFloat(meta.ctr).toFixed(2) : '0'}%
+- Campagnes: ${campaigns.map((c: any) => `${c.name} (ID: ${c.id}, status: ${c.status}, budget: $${c.daily_budget ? (parseInt(c.daily_budget) / 100).toFixed(2) : 'lifetime'})`).join(' | ')}
 
-Als je een actie wil voorstellen, sluit je antwoord dan af met een JSON blok in dit exacte formaat:
-ACTION_JSON:{"type":"update_product_title","description":"Verander de titel van [product] naar [nieuwe titel]","payload":{"product_id":123,"new_title":"Nieuwe Titel"}}
+BESCHIKBARE ACTIES die je kan voorstellen:
 
-Of voor prijs:
-ACTION_JSON:{"type":"update_product_price","description":"Verander de prijs van [product] naar $XX","payload":{"variant_id":123,"new_price":"XX.00"}}
+Shopify:
+- update_product_title: {"product_id": 123, "new_title": "Nieuwe Titel"}
+- update_product_price: {"variant_id": 123, "new_price": "29.99"}
+- update_inventory: {"inventory_item_id": 123, "new_quantity": 50}
+
+Meta Ads:
+- pause_campaign: {"campaign_id": "123"}
+- resume_campaign: {"campaign_id": "123"}
+- update_campaign_budget: {"campaign_id": "123", "new_budget": 20}
+
+Als je een actie wil voorstellen, sluit je antwoord dan af met:
+ACTION_JSON:{"type":"ACTIE_TYPE","description":"Duidelijke uitleg voor de gebruiker","payload":{...}}
 
 Antwoord altijd in het Nederlands. Wees direct en concreet.`;
 
@@ -97,7 +113,6 @@ Antwoord altijd in het Nederlands. Wees direct en concreet.`;
       .map((b: any) => b.text)
       .join('');
 
-    // Parse action uit het antwoord
     let action = null;
     const actionMatch = text.match(/ACTION_JSON:({.*})/);
     if (actionMatch) {
