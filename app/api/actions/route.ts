@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const PAGE_ID = '61590315366201';
+const INSTAGRAM_ACTOR_ID = '24292588933773149';
 const AD_ACCOUNT_ID = 'act_1315459333262567';
 
 async function getShopifyToken() {
@@ -147,9 +148,10 @@ export async function POST(request: NextRequest) {
       // Stap 3: Creative aanmaken
       const creativeBody: any = {
         name: `${campaign_name} - Creative`,
-        object_story_spec: {
-          page_id: PAGE_ID,
-          link_data: {
+object_story_spec: {
+  page_id: PAGE_ID,
+  instagram_actor_id: INSTAGRAM_ACTOR_ID,
+  link_data: {
             message: ad_body,
             link: ad_url,
             name: ad_headline,
