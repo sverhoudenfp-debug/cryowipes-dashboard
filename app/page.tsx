@@ -44,16 +44,90 @@ function ActionCard({ action, onApprove, onReject }: { action: AIAction; onAppro
       <div style={{ fontSize: 13, color: '#f9fafb', marginBottom: 12, lineHeight: 1.5 }}>{action.description}</div>
       {action.status === 'pending' && (
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={onApprove} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-            ✅ Goedkeuren
-          </button>
-          <button onClick={onReject} style={{ padding: '8px 16px', background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-            ❌ Afwijzen
-          </button>
+          <button onClick={onApprove} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>✅ Goedkeuren</button>
+          <button onClick={onReject} style={{ padding: '8px 16px', background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>❌ Afwijzen</button>
         </div>
       )}
       {action.status === 'executed' && <div style={{ fontSize: 12, color: '#10b981' }}>✅ Uitgevoerd</div>}
       {action.status === 'rejected' && <div style={{ fontSize: 12, color: '#ef4444' }}>❌ Afgewezen</div>}
+    </div>
+  );
+}
+
+function SEOPage() {
+  const [seoData, setSeoData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch('/api/seo').then(r => r.json()).then(d => { setSeoData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
+
+  const scoreColor = !seoData ? '#6b7280' : seoData.score >= 80 ? '#10b981' : seoData.score >= 60 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div>
+      {loading && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#6b7280', fontSize: 13 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#00c2ff', boxShadow: '0 0 6px #00c2ff' }}></div>
+          SEO scan bezig... dit kan even duren
+        </div>
+      )}
+      {seoData && !loading && (
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
+            <div style={{ background: '#111827', border: `1px solid ${scoreColor}40`, borderRadius: 12, padding: '18px 20px' }}>
+              <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>SEO Score</div>
+              <div style={{ fontSize: 40, fontWeight: 800, color: scoreColor }}>{seoData.score}</div>
+              <div style={{ fontSize: 12, color: scoreColor, marginTop: 4 }}>/100</div>
+            </div>
+            <KpiCard label="Pagina's gescand" value={String(seoData.totalPages)} sub="Producten + collecties" color="#6366f1" />
+            <KpiCard label="Kritieke problemen" value={String(seoData.highCount)} sub="Hoge prioriteit" color="#ef4444" />
+            <KpiCard label="Waarschuwingen" value={String(seoData.mediumCount)} sub="Medium prioriteit" color="#f59e0b" />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }}></div>
+            <span style={{ fontSize: 12, color: '#6b7280' }}>Laatste scan: {new Date(seoData.lastScanned).toLocaleString('nl-NL')}</span>
+            <button onClick={() => { setLoading(true); fetch('/api/seo').then(r => r.json()).then(d => { setSeoData(d); setLoading(false); }); }}
+              style={{ padding: '4px 12px', background: '#0070f320', border: '1px solid #0070f340', borderRadius: 6, color: '#00c2ff', fontSize: 11, cursor: 'pointer', marginLeft: 8 }}>
+              ↻ Opnieuw scannen
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {seoData.issues.length === 0 && (
+              <div style={{ background: '#111827', border: '1px solid #10b98140', borderRadius: 12, padding: 20, color: '#10b981', fontSize: 13, textAlign: 'center' }}>
+                ✅ Geen SEO problemen gevonden! Je website is goed geoptimaliseerd.
+              </div>
+            )}
+            {seoData.issues.map((p: any, i: number) => (
+              <div key={i} style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div>
+                    <span style={{ fontSize: 11, color: p.page_type === 'product' ? '#6366f1' : '#f59e0b', background: p.page_type === 'product' ? '#6366f120' : '#f59e0b20', padding: '2px 8px', borderRadius: 4, marginRight: 8 }}>
+                      {p.page_type === 'product' ? 'Product' : 'Collectie'}
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#f9fafb' }}>{p.page_title}</span>
+                  </div>
+                  <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#00c2ff', textDecoration: 'none' }}>→ Bekijk pagina</a>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {p.issues.map((issue: any, j: number) => (
+                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#0d1117', borderRadius: 8 }}>
+                      <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: issue.severity === 'hoog' ? '#ef444420' : '#f59e0b20', color: issue.severity === 'hoog' ? '#ef4444' : '#f59e0b', flexShrink: 0 }}>
+                        {issue.severity === 'hoog' ? '🔴 Hoog' : '🟡 Medium'}
+                      </span>
+                      <span style={{ fontSize: 12, color: '#9ca3af', flex: 1 }}>{issue.message}</span>
+                      {issue.suggestion && <span style={{ fontSize: 11, color: '#10b981' }}>→ {issue.suggestion}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -501,7 +575,9 @@ export default function Dashboard() {
             </div>
           )}
 
-          {page !== 'dashboard' && page !== 'shopify' && page !== 'ai' && page !== 'meta' && (
+          {page === 'seo' && <SEOPage />}
+
+          {page !== 'dashboard' && page !== 'shopify' && page !== 'ai' && page !== 'meta' && page !== 'seo' && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#4b5563', fontSize: 14 }}>
               {NAV.find(n => n.id === page)?.label} pagina — komt binnenkort
             </div>
