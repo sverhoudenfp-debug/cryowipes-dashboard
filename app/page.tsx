@@ -26,15 +26,48 @@ function KpiCard({ label, value, sub, color }: { label: string; value: string; s
   );
 }
 
+interface AIAction {
+  id: string;
+  description: string;
+  action: string;
+  payload: any;
+  status: 'pending' | 'approved' | 'rejected' | 'executed';
+}
+
+function ActionCard({ action, onApprove, onReject }: { action: AIAction; onApprove: () => void; onReject: () => void }) {
+  return (
+    <div style={{ background: '#111827', border: '1px solid #f59e0b40', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }}></div>
+        <span style={{ fontSize: 12, color: '#f59e0b', fontWeight: 600 }}>AI Actie Voorstel</span>
+      </div>
+      <div style={{ fontSize: 13, color: '#f9fafb', marginBottom: 12, lineHeight: 1.5 }}>{action.description}</div>
+      {action.status === 'pending' && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onApprove} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+            ✅ Goedkeuren
+          </button>
+          <button onClick={onReject} style={{ padding: '8px 16px', background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+            ❌ Afwijzen
+          </button>
+        </div>
+      )}
+      {action.status === 'executed' && <div style={{ fontSize: 12, color: '#10b981' }}>✅ Uitgevoerd</div>}
+      {action.status === 'rejected' && <div style={{ fontSize: 12, color: '#ef4444' }}>❌ Afgewezen</div>}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [page, setPage] = useState('dashboard');
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Hoi! Ik ben je CryoWipes AI manager. Stel me een vraag over je ads, omzet of SEO.' }
+    { role: 'assistant', content: 'Hoi! Ik ben je CryoWipes AI manager. Ik kan je data analyseren en acties voorstellen die jij kan goedkeuren.' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [shopifyData, setShopifyData] = useState<any>(null);
   const [metaData, setMetaData] = useState<any>(null);
+  const [pendingActions, setPendingActions] = useState<AIAction[]>([]);
   const chatRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,6 +84,27 @@ export default function Dashboard() {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages]);
 
+  async function approveAction(actionId: string) {
+    const action = pendingActions.find(a => a.id === actionId);
+    if (!action) return;
+    setPendingActions(prev => prev.map(a => a.id === actionId ? { ...a, status: 'executed' } : a));
+    try {
+      await fetch('/api/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: action.action, payload: action.payload }),
+      });
+      setMessages(prev => [...prev, { role: 'assistant', content: `✅ Actie uitgevoerd: ${action.description}` }]);
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: '❌ Er ging iets mis bij het uitvoeren van de actie.' }]);
+    }
+  }
+
+  function rejectAction(actionId: string) {
+    setPendingActions(prev => prev.map(a => a.id === actionId ? { ...a, status: 'rejected' } : a));
+    setMessages(prev => [...prev, { role: 'assistant', content: 'Ok, ik sla deze actie over. Laat me weten als je iets anders wil.' }]);
+  }
+
   async function send() {
     if (!input.trim()) return;
     const msgs = [...messages, { role: 'user', content: input }];
@@ -64,8 +118,22 @@ export default function Dashboard() {
         body: JSON.stringify({ messages: msgs.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })) })
       });
       const data = await res.json();
+
+      if (data.action) {
+        const newAction: AIAction = {
+          id: Date.now().toString(),
+          description: data.action.description,
+          action: data.action.type,
+          payload: data.action.payload,
+          status: 'pending',
+        };
+        setPendingActions(prev => [...prev, newAction]);
+      }
+
       setMessages([...msgs, { role: 'assistant', content: data.content }]);
-    } catch { setMessages([...msgs, { role: 'assistant', content: 'Er ging iets mis.' }]); }
+    } catch {
+      setMessages([...msgs, { role: 'assistant', content: 'Er ging iets mis.' }]);
+    }
     setLoading(false);
   }
 
@@ -100,6 +168,11 @@ export default function Dashboard() {
               borderLeft: page === n.id ? '2px solid #00c2ff' : '2px solid transparent',
             }}>
               <span style={{ fontSize: 16 }}>{n.icon}</span> {n.label}
+              {n.id === 'ai' && pendingActions.filter(a => a.status === 'pending').length > 0 && (
+                <span style={{ marginLeft: 'auto', background: '#f59e0b', color: '#000', borderRadius: '50%', width: 18, height: 18, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                  {pendingActions.filter(a => a.status === 'pending').length}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -114,7 +187,6 @@ export default function Dashboard() {
 
       {/* MAIN */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-        {/* TOPBAR */}
         <div style={{ padding: '20px 28px', borderBottom: '1px solid #1f2937', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0d1117' }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#f9fafb' }}>
@@ -126,13 +198,17 @@ export default function Dashboard() {
             <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 8, padding: '6px 14px', fontSize: 12, color: '#9ca3af' }}>
               Laatste 7 dagen
             </div>
-            <div style={{ background: 'linear-gradient(135deg, #0070f3, #00c2ff)', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+            <div onClick={() => setPage('ai')} style={{ background: 'linear-gradient(135deg, #0070f3, #00c2ff)', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', position: 'relative' }}>
               ◈ AI Agent
+              {pendingActions.filter(a => a.status === 'pending').length > 0 && (
+                <span style={{ position: 'absolute', top: -6, right: -6, background: '#f59e0b', color: '#000', borderRadius: '50%', width: 16, height: 16, fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                  {pendingActions.filter(a => a.status === 'pending').length}
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        {/* CONTENT */}
         <div style={{ padding: 28, flex: 1 }}>
 
           {page === 'dashboard' && (
@@ -196,6 +272,51 @@ export default function Dashboard() {
             </div>
           )}
 
+          {page === 'ai' && (
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>
+                    Openstaande acties
+                    {pendingActions.filter(a => a.status === 'pending').length > 0 && (
+                      <span style={{ marginLeft: 8, background: '#f59e0b', color: '#000', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>
+                        {pendingActions.filter(a => a.status === 'pending').length} wachtend
+                      </span>
+                    )}
+                  </div>
+                  {pendingActions.length === 0 && (
+                    <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20, color: '#6b7280', fontSize: 13 }}>
+                      Geen openstaande acties. Vraag de AI om iets te analyseren of aan te passen.
+                    </div>
+                  )}
+                  {pendingActions.map(a => (
+                    <ActionCard key={a.id} action={a} onApprove={() => approveAction(a.id)} onReject={() => rejectAction(a.id)} />
+                  ))}
+                </div>
+                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>◈ AI Agent Chat</div>
+                  <div ref={chatRef} style={{ height: 350, overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {messages.map((m, i) => (
+                      <div key={i} style={{
+                        padding: '10px 14px', borderRadius: 10, fontSize: 13, lineHeight: 1.5, maxWidth: '90%',
+                        alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+                        background: m.role === 'user' ? 'linear-gradient(135deg, #0070f3, #00c2ff)' : '#0d1117',
+                        color: '#f9fafb',
+                      }}>{m.content}</div>
+                    ))}
+                    {loading && <div style={{ padding: '10px 14px', borderRadius: 10, fontSize: 13, background: '#0d1117', color: '#6b7280', alignSelf: 'flex-start' }}>Bezig...</div>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()}
+                      placeholder="Vraag de AI om iets te analyseren of voor te stellen..."
+                      style={{ flex: 1, padding: '10px 14px', background: '#0d1117', color: '#f9fafb', border: '1px solid #1f2937', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+                    <button onClick={send} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #0070f3, #00c2ff)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Stuur</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {page === 'shopify' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
@@ -230,11 +351,15 @@ export default function Dashboard() {
                   <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: '#f9fafb' }}>Live bezoekers</div>
                   <div style={{ fontSize: 36, fontWeight: 800, color: '#10b981', marginBottom: 4 }}>—</div>
                   <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 16 }}>Niet beschikbaar via API</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#9ca3af', marginBottom: 10 }}>Meest bekeken pagina's</div>
-                  {["/collections/all", "/products/cryo-pro", "/pages/about"].map(p => (
-                    <div key={p} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937', fontSize: 12 }}>
-                      <span style={{ color: '#9ca3af' }}>{p}</span>
-                    </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#9ca3af', marginBottom: 10 }}>Snelle links</div>
+                  {[
+                    { label: 'Orders', url: 'https://admin.shopify.com/store/cryowipes/orders' },
+                    { label: 'Producten', url: 'https://admin.shopify.com/store/cryowipes/products' },
+                    { label: 'Klanten', url: 'https://admin.shopify.com/store/cryowipes/customers' },
+                  ].map(l => (
+                    <a key={l.label} href={l.url} target="_blank" rel="noreferrer" style={{ display: 'block', padding: '6px 0', borderBottom: '1px solid #1f2937', fontSize: 12, color: '#00c2ff', textDecoration: 'none' }}>
+                      → {l.label}
+                    </a>
                   ))}
                 </div>
               </div>
@@ -295,29 +420,10 @@ export default function Dashboard() {
                   </table>
                 </div>
               </div>
-              <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Snelle acties</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-                  {[
-                    { label: 'Shopify Admin', icon: '🛍', url: 'https://admin.shopify.com/store/cryowipes' },
-                    { label: 'Orders bekijken', icon: '📦', url: 'https://admin.shopify.com/store/cryowipes/orders' },
-                    { label: 'Producten', icon: '📋', url: 'https://admin.shopify.com/store/cryowipes/products' },
-                    { label: 'Klanten', icon: '👥', url: 'https://admin.shopify.com/store/cryowipes/customers' },
-                  ].map(a => (
-                    <a key={a.label} href={a.url} target="_blank" rel="noreferrer" style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
-                      background: '#0d1117', border: '1px solid #1f2937', borderRadius: 8,
-                      color: '#f9fafb', textDecoration: 'none', fontSize: 13, fontWeight: 500,
-                    }}>
-                      <span style={{ fontSize: 18 }}>{a.icon}</span> {a.label}
-                    </a>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
-          {page !== 'dashboard' && page !== 'shopify' && (
+          {page !== 'dashboard' && page !== 'shopify' && page !== 'ai' && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#4b5563', fontSize: 14 }}>
               {NAV.find(n => n.id === page)?.label} pagina — komt binnenkort
             </div>
