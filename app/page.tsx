@@ -205,14 +205,83 @@ useEffect(() => {
 
 {page === 'shopify' && (
   <div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-      <KpiCard label="Totale omzet" value={`$${revenue}`} sub={`${orders} orders totaal`} color="#10b981" />
-      <KpiCard label="Omzet vandaag" value={`$${shopifyData?.todayRevenue || '0.00'}`} sub={`${shopifyData?.todayOrders || 0} orders vandaag`} color="#10b981" />
-      <KpiCard label="AOV" value={`$${aov}`} sub="Gem. orderwaarde" color="#10b981" />
-      <KpiCard label="Klanten" value={String(shopifyData?.totalCustomers || 0)} sub={`${shopifyData?.totalProducts || 0} producten`} color="#6366f1" />
+    {/* Live indicator */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111827', border: '1px solid #1f2937', borderRadius: 8, padding: '6px 12px' }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }}></div>
+        <span style={{ fontSize: 12, color: '#10b981', fontWeight: 600 }}>Live</span>
+        <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 4 }}>Laatst bijgewerkt: zojuist</span>
+      </div>
     </div>
 
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+    {/* KPI strip */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 20 }}>
+      <KpiCard label="Totale omzet" value={`$${revenue}`} sub={`${orders} orders`} color="#10b981" />
+      <KpiCard label="Orders" value={String(orders)} sub="Alle orders" color="#10b981" />
+      <KpiCard label="AOV" value={`$${aov}`} sub="Gem. waarde" color="#10b981" />
+      <KpiCard label="Omzet vandaag" value={`$${shopifyData?.todayRevenue || '0.00'}`} sub={`${shopifyData?.todayOrders || 0} vandaag`} color="#10b981" />
+      <KpiCard label="Klanten" value={String(shopifyData?.totalCustomers || 0)} sub="Totaal" color="#6366f1" />
+      <KpiCard label="Producten" value={String(shopifyData?.totalProducts || 0)} sub="In catalogus" color="#6366f1" />
+    </div>
+
+    {/* Grafiek + Live bezoekers */}
+    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Omzet over tijd</div>
+        <ResponsiveContainer width="100%" height={180}>
+          <LineChart data={revenueData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+            <XAxis dataKey="dag" stroke="#4b5563" tick={{ fontSize: 11 }} />
+            <YAxis stroke="#4b5563" tick={{ fontSize: 11 }} />
+            <Tooltip contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }} />
+            <Line type="monotone" dataKey="omzet" stroke="#00c2ff" strokeWidth={2} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: '#f9fafb' }}>Live bezoekers</div>
+        <div style={{ fontSize: 36, fontWeight: 800, color: '#10b981', marginBottom: 4 }}>—</div>
+        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 16 }}>Niet beschikbaar via API</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#9ca3af', marginBottom: 10 }}>Meest bekeken pagina's</div>
+        {["/collections/all", "/products/cryo-pro", "/pages/about"].map(p => (
+          <div key={p} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937', fontSize: 12 }}>
+            <span style={{ color: '#9ca3af' }}>{p}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Producten + AI inzichten */}
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Producten</div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #1f2937' }}>
+              {['Product', 'Prijs', 'Voorraad'].map(h => (
+                <th key={h} style={{ padding: '8px 0', color: '#6b7280', fontWeight: 500, textAlign: 'left' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(shopifyData?.products || []).slice(0, 6).map((p: any) => (
+              <tr key={p.id} style={{ borderBottom: '1px solid #1f2937' }}>
+                <td style={{ padding: '10px 0', color: '#f9fafb' }}>{p.title}</td>
+                <td style={{ padding: '10px 0', color: '#00c2ff', fontWeight: 600 }}>${p.price}</td>
+                <td style={{ padding: '10px 0' }}>
+                  <span style={{
+                    background: p.inventory > 10 ? '#10b98120' : '#ef444420',
+                    color: p.inventory > 10 ? '#10b981' : '#ef4444',
+                    padding: '2px 8px', borderRadius: 4, fontSize: 11
+                  }}>{p.inventory} stuks</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Recente orders</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -241,32 +310,28 @@ useEffect(() => {
           </tbody>
         </table>
       </div>
+    </div>
 
-      <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Producten</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {(shopifyData?.products || []).slice(0, 6).map((p: any) => (
-            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#0d1117', borderRadius: 8 }}>
-              <div>
-                <div style={{ fontSize: 13, color: '#f9fafb', fontWeight: 500 }}>{p.title}</div>
-                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>Voorraad: {p.inventory} stuks</div>
-              </div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#00c2ff' }}>${p.price}</div>
-            </div>
-          ))}
-        </div>
+    {/* Snelle acties */}
+    <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
+      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Snelle acties</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        {[
+          { label: 'Shopify Admin', icon: '🛍', url: 'https://admin.shopify.com/store/cryowipes' },
+          { label: 'Orders bekijken', icon: '📦', url: 'https://admin.shopify.com/store/cryowipes/orders' },
+          { label: 'Producten', icon: '📋', url: 'https://admin.shopify.com/store/cryowipes/products' },
+          { label: 'Klanten', icon: '👥', url: 'https://admin.shopify.com/store/cryowipes/customers' },
+        ].map(a => (
+          <a key={a.label} href={a.url} target="_blank" rel="noreferrer" style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+            background: '#0d1117', border: '1px solid #1f2937', borderRadius: 8,
+            color: '#f9fafb', textDecoration: 'none', fontSize: 13, fontWeight: 500,
+            cursor: 'pointer'
+          }}>
+            <span style={{ fontSize: 18 }}>{a.icon}</span> {a.label}
+          </a>
+        ))}
       </div>
     </div>
   </div>
 )}
-
-{page !== 'dashboard' && page !== 'shopify' && (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#4b5563', fontSize: 14 }}>
-    {NAV.find(n => n.id === page)?.label} pagina — komt binnenkort
-  </div>
-)}
-        </div>
-      </div>
-    </div>
-  );
-}
