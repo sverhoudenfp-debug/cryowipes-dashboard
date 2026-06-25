@@ -11,17 +11,38 @@ Je kan helpen met:
 2. SHOPIFY STATISTIEKEN - omzet, bestellingen en producten bijhouden
 3. SEO OPTIMALISATIE - productpagina titels en beschrijvingen verbeteren
 4. SOCIAL MEDIA - content suggesties, captions en hashtags voor TikTok en Instagram
+
+Shopify winkel: cryowipes.myshopify.com
+TikTok Ads account: 7643583810621194257
+Meta Ads account: act_1315459333262567
+
 Antwoord altijd in het Nederlands. Wees direct en concreet.`;
 
 export async function POST(request: NextRequest) {
-  const { messages } = await request.json();
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1000,
-    system: systemPrompt,
-    messages,
-  });
-  return NextResponse.json({ 
-    content: response.content[0].type === 'text' ? response.content[0].text : '' 
-  });
+  try {
+    const { messages } = await request.json();
+    
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages,
+      mcp_servers: [
+        {
+          type: 'url',
+          url: 'https://setup.shopify.com/mcp',
+          name: 'shopify',
+        }
+      ],
+    } as any);
+
+    const text = response.content
+      .filter((b: any) => b.type === 'text')
+      .map((b: any) => b.text)
+      .join('');
+
+    return NextResponse.json({ content: text });
+  } catch (error: any) {
+    return NextResponse.json({ content: 'Er ging iets mis: ' + error.message }, { status: 500 });
+  }
 }
