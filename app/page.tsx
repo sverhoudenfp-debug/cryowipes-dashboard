@@ -37,9 +37,14 @@ export default function Dashboard() {
   const [metaData, setMetaData] = useState<any>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetch('/api/shopify').then(r => r.json()).then(setShopifyData).catch(() => {});
-    fetch('/api/meta').then(r => r.json()).then(setMetaData).catch(() => {});
+useEffect(() => {
+    const load = () => {
+      fetch('/api/shopify').then(r => r.json()).then(setShopifyData).catch(() => {});
+      fetch('/api/meta').then(r => r.json()).then(setMetaData).catch(() => {});
+    };
+    load();
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
