@@ -60,18 +60,18 @@ export async function POST(request: NextRequest) {
     const systemPrompt = `Je bent de AI manager voor CryoWipes (cryowipes.store), een cooling skincare webshop van Silivjn.
 
 LIVE SHOPIFY DATA (nu):
-- Totale omzet: €${totalRevenue.toFixed(2)}
+- Totale omzet: $${totalRevenue.toFixed(2)}
 - Totaal orders: ${orders.length}
-- Gemiddelde orderwaarde: €${aov.toFixed(2)}
+- Gemiddelde orderwaarde: $${aov.toFixed(2)}
 - Orders vandaag: ${todayOrders.length}
-- Omzet vandaag: €${todayRevenue.toFixed(2)}
+- Omzet vandaag: $${todayRevenue.toFixed(2)}
 - Totaal producten: ${products.length}
-- Producten: ${products.map((p: any) => `${p.title} (€${p.variants?.[0]?.price})`).join(', ')}
+- Producten: ${products.map((p: any) => `${p.title} ($${p.variants?.[0]?.price})`).join(', ')}
 - Totaal klanten: ${customers.length}
-- Recente orders: ${orders.slice(0, 5).map((o: any) => `${o.name} - €${o.total_price} - ${o.created_at.split('T')[0]}`).join(', ')}
+- Recente orders: ${orders.slice(0, 5).map((o: any) => `${o.name} - $${o.total_price} - ${o.created_at.split('T')[0]}`).join(', ')}
 
 LIVE META ADS DATA (laatste 7 dagen):
-- Spend: €${meta.spend || '0'}
+- Spend: $${meta.spend || '0'}
 - Impressies: ${meta.impressions || '0'}
 - Clicks: ${meta.clicks || '0'}
 - CTR: ${meta.ctr ? parseFloat(meta.ctr).toFixed(2) : '0'}%
