@@ -95,6 +95,24 @@ Meta Ads:
 - pause_campaign: {"campaign_id": "123"}
 - resume_campaign: {"campaign_id": "123"}
 - update_campaign_budget: {"campaign_id": "123", "new_budget": 20}
+- create_full_campaign: {
+    "campaign_name": "CryoWipes - Naam",
+    "objective": "OUTCOME_SALES",
+    "daily_budget": 10,
+    "targeting_countries": ["NL"],
+    "age_min": 18,
+    "age_max": 45,
+    "ad_headline": "Koel je huid in seconden",
+    "ad_body": "CryoWipes koelende doekjes voor een frisse huid. Probeer nu!",
+    "ad_url": "https://cryowipes.store",
+    "image_url": "https://..."
+  }
+
+BELANGRIJK voor create_full_campaign:
+- Vraag de gebruiker altijd om: campagnenaam, doelgroep, budget per dag, advertentietekst en een afbeeldings-URL
+- De campagne wordt aangemaakt als PAUSED zodat de gebruiker hem zelf kan activeren
+- image_url moet een publiek toegankelijke HTTPS URL zijn van de afbeelding/video
+- Als de gebruiker geen image_url heeft, maak de campagne aan zonder afbeelding
 
 Als je een actie wil voorstellen, sluit je antwoord dan af met:
 ACTION_JSON:{"type":"ACTIE_TYPE","description":"Duidelijke uitleg voor de gebruiker","payload":{...}}
