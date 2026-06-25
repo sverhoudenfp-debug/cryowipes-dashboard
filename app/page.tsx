@@ -335,6 +335,18 @@ useEffect(() => {
     </div>
   </div>
 )}
+          )}
+
+{page !== 'dashboard' && page !== 'shopify' && (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#4b5563', fontSize: 14 }}>
+    {NAV.find(n => n.id === page)?.label} pagina — komt binnenkort
+  </div>
+)}
+        </div>
+      </div>
+    </div>
+  );
+}
 </div>
   </div>
 )}
