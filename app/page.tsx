@@ -203,11 +203,68 @@ useEffect(() => {
             </div>
           )}
 
-          {page !== 'dashboard' && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#4b5563', fontSize: 14 }}>
-              {NAV.find(n => n.id === page)?.label} pagina — komt binnenkort
+{page === 'shopify' && (
+  <div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <KpiCard label="Totale omzet" value={`$${revenue}`} sub={`${orders} orders totaal`} color="#10b981" />
+      <KpiCard label="Omzet vandaag" value={`$${shopifyData?.todayRevenue || '0.00'}`} sub={`${shopifyData?.todayOrders || 0} orders vandaag`} color="#10b981" />
+      <KpiCard label="AOV" value={`$${aov}`} sub="Gem. orderwaarde" color="#10b981" />
+      <KpiCard label="Klanten" value={String(shopifyData?.totalCustomers || 0)} sub={`${shopifyData?.totalProducts || 0} producten`} color="#6366f1" />
+    </div>
+
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+      <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Recente orders</div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #1f2937' }}>
+              {['Order', 'Datum', 'Bedrag', 'Status'].map(h => (
+                <th key={h} style={{ padding: '8px 0', color: '#6b7280', fontWeight: 500, textAlign: 'left' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(shopifyData?.recentOrders || []).map((o: any) => (
+              <tr key={o.id} style={{ borderBottom: '1px solid #1f2937' }}>
+                <td style={{ padding: '10px 0', color: '#00c2ff', fontWeight: 600 }}>{o.id}</td>
+                <td style={{ padding: '10px 0', color: '#9ca3af' }}>{o.date}</td>
+                <td style={{ padding: '10px 0', color: '#f9fafb' }}>${o.total}</td>
+                <td style={{ padding: '10px 0' }}>
+                  <span style={{
+                    background: o.status === 'fulfilled' ? '#10b98120' : '#f59e0b20',
+                    color: o.status === 'fulfilled' ? '#10b981' : '#f59e0b',
+                    padding: '2px 8px', borderRadius: 4, fontSize: 11
+                  }}>{o.status === 'fulfilled' ? 'Verzonden' : 'In behandeling'}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Producten</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {(shopifyData?.products || []).slice(0, 6).map((p: any) => (
+            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#0d1117', borderRadius: 8 }}>
+              <div>
+                <div style={{ fontSize: 13, color: '#f9fafb', fontWeight: 500 }}>{p.title}</div>
+                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>Voorraad: {p.inventory} stuks</div>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#00c2ff' }}>${p.price}</div>
             </div>
-          )}
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{page !== 'dashboard' && page !== 'shopify' && (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#4b5563', fontSize: 14 }}>
+    {NAV.find(n => n.id === page)?.label} pagina — komt binnenkort
+  </div>
+)}
         </div>
       </div>
     </div>
