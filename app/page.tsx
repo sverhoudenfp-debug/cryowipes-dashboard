@@ -118,7 +118,6 @@ export default function Dashboard() {
         body: JSON.stringify({ messages: msgs.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })) })
       });
       const data = await res.json();
-
       if (data.action) {
         const newAction: AIAction = {
           id: Date.now().toString(),
@@ -129,7 +128,6 @@ export default function Dashboard() {
         };
         setPendingActions(prev => [...prev, newAction]);
       }
-
       setMessages([...msgs, { role: 'assistant', content: data.content }]);
     } catch {
       setMessages([...msgs, { role: 'assistant', content: 'Er ging iets mis.' }]);
@@ -146,7 +144,6 @@ export default function Dashboard() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0e1a', color: '#f9fafb', fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {/* SIDEBAR */}
       <div style={{ width: 220, background: '#0d1117', borderRight: '1px solid #1f2937', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
         <div style={{ padding: '0 20px 28px', borderBottom: '1px solid #1f2937' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -185,19 +182,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* MAIN */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
         <div style={{ padding: '20px 28px', borderBottom: '1px solid #1f2937', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0d1117' }}>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#f9fafb' }}>
-              {NAV.find(n => n.id === page)?.label || 'Dashboard'}
-            </div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#f9fafb' }}>{NAV.find(n => n.id === page)?.label || 'Dashboard'}</div>
             <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>Realtime overzicht van al je kanalen</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 8, padding: '6px 14px', fontSize: 12, color: '#9ca3af' }}>
-              Laatste 7 dagen
-            </div>
+            <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 8, padding: '6px 14px', fontSize: 12, color: '#9ca3af' }}>Laatste 7 dagen</div>
             <div onClick={() => setPage('ai')} style={{ background: 'linear-gradient(135deg, #0070f3, #00c2ff)', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', position: 'relative' }}>
               ◈ AI Agent
               {pendingActions.filter(a => a.status === 'pending').length > 0 && (
@@ -363,7 +355,7 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Producten</div>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -380,11 +372,7 @@ export default function Dashboard() {
                           <td style={{ padding: '10px 0', color: '#f9fafb' }}>{p.title}</td>
                           <td style={{ padding: '10px 0', color: '#00c2ff', fontWeight: 600 }}>${p.price}</td>
                           <td style={{ padding: '10px 0' }}>
-                            <span style={{
-                              background: p.inventory > 10 ? '#10b98120' : '#ef444420',
-                              color: p.inventory > 10 ? '#10b981' : '#ef4444',
-                              padding: '2px 8px', borderRadius: 4, fontSize: 11
-                            }}>{p.inventory} stuks</span>
+                            <span style={{ background: p.inventory > 10 ? '#10b98120' : '#ef444420', color: p.inventory > 10 ? '#10b981' : '#ef4444', padding: '2px 8px', borderRadius: 4, fontSize: 11 }}>{p.inventory} stuks</span>
                           </td>
                         </tr>
                       ))}
@@ -408,11 +396,9 @@ export default function Dashboard() {
                           <td style={{ padding: '10px 0', color: '#9ca3af' }}>{o.date}</td>
                           <td style={{ padding: '10px 0', color: '#f9fafb' }}>${o.total}</td>
                           <td style={{ padding: '10px 0' }}>
-                            <span style={{
-                              background: o.status === 'fulfilled' ? '#10b98120' : '#f59e0b20',
-                              color: o.status === 'fulfilled' ? '#10b981' : '#f59e0b',
-                              padding: '2px 8px', borderRadius: 4, fontSize: 11
-                            }}>{o.status === 'fulfilled' ? 'Verzonden' : 'In behandeling'}</span>
+                            <span style={{ background: o.status === 'fulfilled' ? '#10b98120' : '#f59e0b20', color: o.status === 'fulfilled' ? '#10b981' : '#f59e0b', padding: '2px 8px', borderRadius: 4, fontSize: 11 }}>
+                              {o.status === 'fulfilled' ? 'Verzonden' : 'In behandeling'}
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -423,134 +409,103 @@ export default function Dashboard() {
             </div>
           )}
 
-{page === 'meta' && (
-  <div>
-    {/* KPI Strip */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
-      <KpiCard label="Spend" value={`$${metaSpend}`} sub="Laatste 7 dagen" color="#f59e0b" />
-      <KpiCard label="Impressies" value={Number(metaImpressions).toLocaleString()} sub="Laatste 7 dagen" color="#6366f1" />
-      <KpiCard label="Clicks" value={metaClicks} sub="Laatste 7 dagen" color="#6366f1" />
-      <KpiCard label="CTR" value={metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%'} sub="Click-through rate" color="#10b981" />
-      <KpiCard label="CPC" value={metaData?.cpc ? `$${parseFloat(metaData.cpc).toFixed(2)}` : '$0'} sub="Kosten per klik" color="#f59e0b" />
-    </div>
-
-    {/* Grafiek + Campagne status */}
-    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
-      <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Prestaties over tijd</div>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={revenueData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-            <XAxis dataKey="dag" stroke="#4b5563" tick={{ fontSize: 11 }} />
-            <YAxis stroke="#4b5563" tick={{ fontSize: 11 }} />
-            <Tooltip contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }} />
-            <Line type="monotone" dataKey="omzet" stroke="#6366f1" strokeWidth={2} dot={false} name="Spend" />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Account overzicht</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[
-            { label: 'Spend', value: `$${metaSpend}`, color: '#f59e0b' },
-            { label: 'Impressies', value: Number(metaImpressions).toLocaleString(), color: '#6366f1' },
-            { label: 'Clicks', value: metaClicks, color: '#00c2ff' },
-            { label: 'CTR', value: metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%', color: '#10b981' },
-          ].map(s => (
-            <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#0d1117', borderRadius: 8 }}>
-              <span style={{ fontSize: 13, color: '#9ca3af' }}>{s.label}</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: s.color }}>{s.value}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #1f2937' }}>
-          <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Snelle acties</div>
-          <a href="https://adsmanager.facebook.com" target="_blank" rel="noreferrer" style={{ display: 'block', padding: '8px 12px', background: '#0070f320', border: '1px solid #0070f340', borderRadius: 8, color: '#00c2ff', fontSize: 12, textDecoration: 'none' }}>
-            → Open Meta Ads Manager
-          </a>
-        </div>
-      </div>
-    </div>
-
-    {/* Campagnes tabel */}
-    <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#f9fafb' }}>Campagnes</div>
-        <a href="https://adsmanager.facebook.com" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#00c2ff', textDecoration: 'none' }}>Bekijk alle →</a>
-      </div>
-      {metaData?.campaigns && metaData.campaigns.length > 0 ? (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #1f2937' }}>
-              {['Campagne', 'Status', 'Budget', 'Acties'].map(h => (
-                <th key={h} style={{ padding: '8px 0', color: '#6b7280', fontWeight: 500, textAlign: 'left' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {metaData.campaigns.map((c: any) => (
-              <tr key={c.id} style={{ borderBottom: '1px solid #1f2937' }}>
-                <td style={{ padding: '12px 0', color: '#f9fafb', fontWeight: 500 }}>{c.name}</td>
-                <td style={{ padding: '12px 0' }}>
-                  <span style={{
-                    background: c.status === 'ACTIVE' ? '#10b98120' : '#f59e0b20',
-                    color: c.status === 'ACTIVE' ? '#10b981' : '#f59e0b',
-                    padding: '2px 8px', borderRadius: 4, fontSize: 11
-                  }}>{c.status === 'ACTIVE' ? 'Actief' : 'Gepauzeerd'}</span>
-                </td>
-                <td style={{ padding: '12px 0', color: '#9ca3af' }}>
-                  {c.daily_budget ? `$${(parseInt(c.daily_budget) / 100).toFixed(2)}/dag` : 'Lifetime'}
-                </td>
-                <td style={{ padding: '12px 0' }}>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button style={{ padding: '4px 10px', background: '#10b98120', color: '#10b981', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
-                      {c.status === 'ACTIVE' ? '⏸ Pauzeer' : '▶ Hervat'}
-                    </button>
+          {page === 'meta' && (
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
+                <KpiCard label="Spend" value={`$${metaSpend}`} sub="Laatste 7 dagen" color="#f59e0b" />
+                <KpiCard label="Impressies" value={Number(metaImpressions).toLocaleString()} sub="Laatste 7 dagen" color="#6366f1" />
+                <KpiCard label="Clicks" value={metaClicks} sub="Laatste 7 dagen" color="#6366f1" />
+                <KpiCard label="CTR" value={metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%'} sub="Click-through rate" color="#10b981" />
+                <KpiCard label="CPC" value={metaData?.cpc ? `$${parseFloat(metaData.cpc).toFixed(2)}` : '$0'} sub="Kosten per klik" color="#f59e0b" />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Prestaties over tijd</div>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={revenueData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                      <XAxis dataKey="dag" stroke="#4b5563" tick={{ fontSize: 11 }} />
+                      <YAxis stroke="#4b5563" tick={{ fontSize: 11 }} />
+                      <Tooltip contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }} />
+                      <Line type="monotone" dataKey="omzet" stroke="#6366f1" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Account overzicht</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {[
+                      { label: 'Spend', value: `$${metaSpend}`, color: '#f59e0b' },
+                      { label: 'Impressies', value: Number(metaImpressions).toLocaleString(), color: '#6366f1' },
+                      { label: 'Clicks', value: metaClicks, color: '#00c2ff' },
+                      { label: 'CTR', value: metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%', color: '#10b981' },
+                    ].map(s => (
+                      <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#0d1117', borderRadius: 8 }}>
+                        <span style={{ fontSize: 13, color: '#9ca3af' }}>{s.label}</span>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: s.color }}>{s.value}</span>
+                      </div>
+                    ))}
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <div style={{ color: '#6b7280', fontSize: 13, padding: '20px 0', textAlign: 'center' }}>
-          Geen campagnes gevonden. Controleer je Meta Ads account.
-        </div>
-      )}
-    </div>
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #1f2937' }}>
+                    <a href="https://adsmanager.facebook.com" target="_blank" rel="noreferrer" style={{ display: 'block', padding: '8px 12px', background: '#0070f320', border: '1px solid #0070f340', borderRadius: 8, color: '#00c2ff', fontSize: 12, textDecoration: 'none' }}>
+                      → Open Meta Ads Manager
+                    </a>
+                  </div>
+                </div>
+              </div>
+              <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20, marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#f9fafb' }}>Campagnes</div>
+                  <a href="https://adsmanager.facebook.com" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#00c2ff', textDecoration: 'none' }}>Bekijk alle →</a>
+                </div>
+                {metaData?.campaigns && metaData.campaigns.length > 0 ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #1f2937' }}>
+                        {['Campagne', 'Status', 'Budget', 'Acties'].map(h => (
+                          <th key={h} style={{ padding: '8px 0', color: '#6b7280', fontWeight: 500, textAlign: 'left' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {metaData.campaigns.map((c: any) => (
+                        <tr key={c.id} style={{ borderBottom: '1px solid #1f2937' }}>
+                          <td style={{ padding: '12px 0', color: '#f9fafb', fontWeight: 500 }}>{c.name}</td>
+                          <td style={{ padding: '12px 0' }}>
+                            <span style={{ background: c.status === 'ACTIVE' ? '#10b98120' : '#f59e0b20', color: c.status === 'ACTIVE' ? '#10b981' : '#f59e0b', padding: '2px 8px', borderRadius: 4, fontSize: 11 }}>
+                              {c.status === 'ACTIVE' ? 'Actief' : 'Gepauzeerd'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 0', color: '#9ca3af' }}>{c.daily_budget ? `$${(parseInt(c.daily_budget) / 100).toFixed(2)}/dag` : 'Lifetime'}</td>
+                          <td style={{ padding: '12px 0' }}>
+                            <button style={{ padding: '4px 10px', background: '#10b98120', color: '#10b981', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+                              {c.status === 'ACTIVE' ? '⏸ Pauzeer' : '▶ Hervat'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ color: '#6b7280', fontSize: 13, padding: '20px 0', textAlign: 'center' }}>Geen campagnes gevonden.</div>
+                )}
+              </div>
+              <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>◈ AI Inzichten</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {['Analyseer mijn Meta campagnes', 'Welke campagne moet ik pauzeren?', 'Hoe kan ik mijn CTR verbeteren?', 'Stel een budget optimalisatie voor'].map(q => (
+                    <button key={q} onClick={() => { setInput(q); setPage('ai'); }} style={{ padding: '8px 14px', background: '#0d1117', border: '1px solid #1f2937', borderRadius: 8, color: '#9ca3af', fontSize: 12, cursor: 'pointer' }}>{q}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
-    {/* AI Inzichten */}
-    <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>◈ AI Inzichten</div>
-      <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 12 }}>Vraag de AI om je Meta Ads te analyseren:</div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {[
-          'Analyseer mijn Meta campagnes',
-          'Welke campagne moet ik pauzeren?',
-          'Hoe kan ik mijn CTR verbeteren?',
-          'Stel een budget optimalisatie voor',
-        ].map(q => (
-          <button key={q} onClick={() => { setInput(q); setPage('ai'); }} style={{
-            padding: '8px 14px', background: '#0d1117', border: '1px solid #1f2937',
-            borderRadius: 8, color: '#9ca3af', fontSize: 12, cursor: 'pointer'
-          }}>{q}</button>
-        ))}
-      </div>
-    </div>
-  </div>
-  {page !== 'dashboard' && page !== 'shopify' && page !== 'ai' && page !== 'meta' && (
+          {page !== 'dashboard' && page !== 'shopify' && page !== 'ai' && page !== 'meta' && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#4b5563', fontSize: 14 }}>
               {NAV.find(n => n.id === page)?.label} pagina — komt binnenkort
             </div>
           )}
-
-        </div>
-      </div>
-    </div>
-  );
-}
-)}
 
         </div>
       </div>
