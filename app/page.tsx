@@ -139,10 +139,10 @@ useEffect(() => {
             <div>
               {/* KPI STRIP */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-                <KpiCard label="Totale omzet" value={`€${revenue}`} sub={`${orders} orders`} color="#10b981" />
-                <KpiCard label="Orders" value={String(orders)} sub="Laatste 7 dagen" color="#10b981" />
-                <KpiCard label="AOV" value={`€${aov}`} sub="Gem. orderwaarde" color="#10b981" />
-                <KpiCard label="Meta Spend" value={`€${metaSpend}`} sub={`${metaImpressions} impressies`} color="#f59e0b" />
+<KpiCard label="Totale omzet" value={`$${revenue}`} sub={`${orders} orders`} color="#10b981" />
+<KpiCard label="Orders" value={String(orders)} sub="Laatste 7 dagen" color="#10b981" />
+<KpiCard label="AOV" value={`$${aov}`} sub="Gem. orderwaarde" color="#10b981" />
+<KpiCard label="Meta Spend" value={`$${metaSpend}`} sub={`${metaImpressions} impressies`} color="#f59e0b" />
               </div>
 
               {/* CHARTS ROW */}
@@ -165,7 +165,7 @@ useEffect(() => {
                   <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Meta Ads prestaties</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     {[
-                      { label: 'Spend', value: `€${metaSpend}` },
+                      { label: 'Spend', value: `$${metaSpend}` },
                       { label: 'Impressies', value: Number(metaImpressions).toLocaleString() },
                       { label: 'Clicks', value: metaClicks },
                       { label: 'CTR', value: metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%' },
