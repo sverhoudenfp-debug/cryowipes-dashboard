@@ -16,6 +16,18 @@ const revenueData = [
   { dag: 'Do', omzet: 120 }, { dag: 'Vr', omzet: 95 }, { dag: 'Za', omzet: 148 }, { dag: 'Zo', omzet: 110 },
 ];
 
+function renderMessage(text: string) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#f9fafb">$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^### (.+)$/gm, '<div style="font-weight:600;color:#00c2ff;margin:8px 0 4px;font-size:12px">$1</div>')
+    .replace(/^## (.+)$/gm, '<div style="font-weight:700;color:#f9fafb;margin:10px 0 4px;font-size:13px">$1</div>')
+    .replace(/^- (.+)$/gm, '<div style="padding:3px 0 3px 10px;border-left:2px solid #1f2937;margin:2px 0;color:#d1d5db">$1</div>')
+    .replace(/^\d+\. (.+)$/gm, '<div style="padding:3px 0 3px 10px;border-left:2px solid #00c2ff40;margin:2px 0;color:#d1d5db">$1</div>')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>');
+}
+
 function KpiCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color: string }) {
   return (
     <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: '18px 20px', minWidth: 0 }}>
@@ -41,7 +53,7 @@ function ActionCard({ action, onApprove, onReject }: { action: AIAction; onAppro
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }}></div>
         <span style={{ fontSize: 12, color: '#f59e0b', fontWeight: 600 }}>AI Actie Voorstel</span>
       </div>
-      <div style={{ fontSize: 13, color: '#f9fafb', marginBottom: 12, lineHeight: 1.5 }}>{action.description}</div>
+      <div style={{ fontSize: 13, color: '#f9fafb', marginBottom: 12, lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: renderMessage(action.description) }} />
       {action.status === 'pending' && (
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onApprove} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>✅ Goedkeuren</button>
@@ -85,7 +97,6 @@ function SEOPage() {
             <KpiCard label="Kritieke problemen" value={String(seoData.highCount)} sub="Hoge prioriteit" color="#ef4444" />
             <KpiCard label="Waarschuwingen" value={String(seoData.mediumCount)} sub="Medium prioriteit" color="#f59e0b" />
           </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }}></div>
             <span style={{ fontSize: 12, color: '#6b7280' }}>Laatste scan: {new Date(seoData.lastScanned).toLocaleString('nl-NL')}</span>
@@ -94,7 +105,6 @@ function SEOPage() {
               ↻ Opnieuw scannen
             </button>
           </div>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {seoData.issues.length === 0 && (
               <div style={{ background: '#111827', border: '1px solid #10b98140', borderRadius: 12, padding: 20, color: '#10b981', fontSize: 13, textAlign: 'center' }}>
@@ -320,11 +330,11 @@ export default function Dashboard() {
                 <div ref={chatRef} style={{ maxHeight: 220, overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {messages.map((m, i) => (
                     <div key={i} style={{
-                      padding: '10px 14px', borderRadius: 10, fontSize: 13, lineHeight: 1.5, maxWidth: '85%',
+                      padding: '10px 14px', borderRadius: 10, fontSize: 13, lineHeight: 1.6, maxWidth: '85%',
                       alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
                       background: m.role === 'user' ? 'linear-gradient(135deg, #0070f3, #00c2ff)' : '#0d1117',
                       color: '#f9fafb',
-                    }}>{m.content}</div>
+                    }} dangerouslySetInnerHTML={{ __html: renderMessage(m.content) }} />
                   ))}
                   {loading && <div style={{ padding: '10px 14px', borderRadius: 10, fontSize: 13, background: '#0d1117', color: '#6b7280', alignSelf: 'flex-start' }}>Bezig...</div>}
                 </div>
@@ -364,11 +374,11 @@ export default function Dashboard() {
                   <div ref={chatRef} style={{ height: 350, overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {messages.map((m, i) => (
                       <div key={i} style={{
-                        padding: '10px 14px', borderRadius: 10, fontSize: 13, lineHeight: 1.5, maxWidth: '90%',
+                        padding: '10px 14px', borderRadius: 10, fontSize: 13, lineHeight: 1.6, maxWidth: '90%',
                         alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
                         background: m.role === 'user' ? 'linear-gradient(135deg, #0070f3, #00c2ff)' : '#0d1117',
                         color: '#f9fafb',
-                      }}>{m.content}</div>
+                      }} dangerouslySetInnerHTML={{ __html: renderMessage(m.content) }} />
                     ))}
                     {loading && <div style={{ padding: '10px 14px', borderRadius: 10, fontSize: 13, background: '#0d1117', color: '#6b7280', alignSelf: 'flex-start' }}>Bezig...</div>}
                   </div>
