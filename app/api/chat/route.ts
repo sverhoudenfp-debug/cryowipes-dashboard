@@ -7,7 +7,7 @@ const client = new Anthropic({
 
 async function getShopifyData() {
   const base = `https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/api/2024-01`;
-  const headers = { 'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN! };
+  const headers = { 'X-Shopify-Access-Token': process.env.SHOPIFY_ADMIN_ACCESS_TOKEN! };
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
