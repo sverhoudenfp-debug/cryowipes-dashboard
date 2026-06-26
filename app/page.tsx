@@ -2,6 +2,233 @@
 import { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
+// ─── Styles ────────────────────────────────────────────────────────────────────
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #060810;
+    --bg-panel: #0c0f1a;
+    --bg-card: #111525;
+    --bg-hover: #161b2e;
+    --border: #1e2540;
+    --border-bright: #2a3260;
+    --text: #e8eaf0;
+    --text-muted: #5a6280;
+    --text-dim: #8892b0;
+    --blue: #4f8ef7;
+    --blue-bright: #6fa8ff;
+    --cyan: #00d4ff;
+    --cyan-dim: #00d4ff30;
+    --green: #00e5a0;
+    --green-dim: #00e5a020;
+    --amber: #ffb547;
+    --amber-dim: #ffb54720;
+    --red: #ff5c5c;
+    --red-dim: #ff5c5c20;
+    --purple: #a78bfa;
+    --purple-dim: #a78bfa20;
+    --gradient: linear-gradient(135deg, #4f8ef7, #00d4ff);
+    --gradient-glow: linear-gradient(135deg, #4f8ef740, #00d4ff20);
+    --font: 'Inter', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  body { background: var(--bg); font-family: var(--font); color: var(--text); }
+
+  .sidebar {
+    width: 240px;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .sidebar::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 1px; height: 100%;
+    background: linear-gradient(to bottom, transparent, var(--cyan-dim), transparent);
+  }
+
+  .nav-btn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 10px 14px;
+    border-radius: var(--radius-sm); border: none; cursor: pointer;
+    background: transparent; color: var(--text-muted);
+    font-weight: 500; font-size: 13.5px; font-family: var(--font);
+    text-align: left; transition: all 0.2s;
+    border-left: 2px solid transparent;
+    margin-bottom: 2px;
+  }
+  .nav-btn:hover { background: var(--bg-hover); color: var(--text-dim); }
+  .nav-btn.active {
+    background: var(--gradient-glow);
+    color: var(--cyan);
+    border-left: 2px solid var(--cyan);
+    font-weight: 600;
+  }
+
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    min-width: 0;
+    transition: border-color 0.2s, transform 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan-dim), transparent);
+  }
+  .kpi-card:hover { border-color: var(--border-bright); transform: translateY(-1px); }
+  .kpi-label { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+  .kpi-value { font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; line-height: 1; }
+  .kpi-sub { font-size: 12px; margin-top: 6px; }
+
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+  }
+  .panel-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 18px; }
+
+  /* Chat */
+  .chat-wrap { display: flex; flex-direction: column; height: 100%; }
+  .chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .msg-bubble {
+    padding: 11px 15px; border-radius: 12px;
+    font-size: 13px; line-height: 1.65; max-width: 88%;
+    animation: fadeUp 0.25s ease;
+  }
+  .msg-bubble.assistant {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    align-self: flex-start;
+    color: var(--text-dim);
+    border-radius: 4px 12px 12px 12px;
+  }
+  .msg-bubble.user {
+    background: var(--gradient);
+    color: #fff;
+    align-self: flex-end;
+    border-radius: 12px 12px 4px 12px;
+    font-weight: 500;
+  }
+
+  .typing-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--cyan); display: inline-block; margin: 0 2px;
+    animation: typingPulse 1.2s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  .chat-input-row { display: flex; gap: 8px; margin-top: 12px; }
+  .chat-input {
+    flex: 1; padding: 11px 16px;
+    background: var(--bg-panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 13px; font-family: var(--font); outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--cyan); }
+  .chat-input::placeholder { color: var(--text-muted); }
+  .chat-send {
+    padding: 11px 20px;
+    background: var(--gradient); color: #fff;
+    border: none; border-radius: var(--radius-sm);
+    cursor: pointer; font-weight: 600; font-size: 13px; font-family: var(--font);
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .chat-send:hover { opacity: 0.9; }
+  .chat-send:active { transform: scale(0.97); }
+  .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Action card */
+  .action-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--amber-dim);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    animation: fadeUp 0.3s ease;
+  }
+
+  /* Badge */
+  .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 2px 8px; border-radius: 6px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em;
+  }
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-amber { background: var(--amber-dim); color: var(--amber); }
+  .badge-red { background: var(--red-dim); color: var(--red); }
+  .badge-blue { background: var(--purple-dim); color: var(--purple); }
+  .badge-cyan { background: var(--cyan-dim); color: var(--cyan); }
+
+  /* Dot indicator */
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .dot-cyan { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { padding: 8px 0; color: var(--text-muted); font-weight: 500; text-align: left; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .data-table td { padding: 11px 0; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+  .data-table tr:last-child td { border-bottom: none; }
+
+  /* Pill btn */
+  .pill-btn {
+    padding: 7px 14px; background: var(--bg-panel);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text-muted); font-size: 12px; cursor: pointer; font-family: var(--font);
+    transition: all 0.15s;
+  }
+  .pill-btn:hover { border-color: var(--border-bright); color: var(--text-dim); background: var(--bg-hover); }
+
+  /* Scrollbar global */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes typingPulse {
+    0%, 60%, 100% { transform: scale(1); opacity: 0.4; }
+    30% { transform: scale(1.4); opacity: 1; }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .pulse { animation: pulse 2s ease-in-out infinite; }
+`;
+
+// ─── Nav ───────────────────────────────────────────────────────────────────────
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: '⬡' },
   { id: 'shopify', label: 'Shopify', icon: '🛍' },
@@ -16,56 +243,85 @@ const revenueData = [
   { dag: 'Do', omzet: 120 }, { dag: 'Vr', omzet: 95 }, { dag: 'Za', omzet: 148 }, { dag: 'Zo', omzet: 110 },
 ];
 
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 function renderMessage(text: string) {
   return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#f9fafb">$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^### (.+)$/gm, '<div style="font-weight:600;color:#00c2ff;margin:8px 0 4px;font-size:12px">$1</div>')
-    .replace(/^## (.+)$/gm, '<div style="font-weight:700;color:#f9fafb;margin:10px 0 4px;font-size:13px">$1</div>')
-    .replace(/^- (.+)$/gm, '<div style="padding:3px 0 3px 10px;border-left:2px solid #1f2937;margin:2px 0;color:#d1d5db">$1</div>')
-    .replace(/^\d+\. (.+)$/gm, '<div style="padding:3px 0 3px 10px;border-left:2px solid #00c2ff40;margin:2px 0;color:#d1d5db">$1</div>')
-    .replace(/\n\n/g, '<br/><br/>')
-    .replace(/\n/g, '<br/>');
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text)">$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em style="color:var(--text-dim)">$1</em>')
+    .replace(/^### (.+)$/gm, '<div style="font-weight:600;color:var(--cyan);margin:8px 0 4px;font-size:11.5px;text-transform:uppercase;letter-spacing:0.06em">$1</div>')
+    .replace(/^## (.+)$/gm, '<div style="font-weight:700;color:var(--text);margin:10px 0 4px;font-size:13px">$1</div>')
+    .replace(/^- (.+)$/gm, '<div style="padding:3px 0 3px 12px;border-left:2px solid var(--border-bright);margin:3px 0;color:var(--text-dim)">$1</div>')
+    .replace(/^\d+\. (.+)$/gm, '<div style="padding:3px 0 3px 12px;border-left:2px solid var(--cyan-dim);margin:3px 0;color:var(--text-dim)">$1</div>')
+    .replace(/\n\n/g, '<br/><br/>').replace(/\n/g, '<br/>');
 }
 
+// ─── KPI Card ─────────────────────────────────────────────────────────────────
 function KpiCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color: string }) {
   return (
-    <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: '18px 20px', minWidth: 0 }}>
-      <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 700, color: '#f9fafb', letterSpacing: '-0.02em' }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color, marginTop: 4 }}>{sub}</div>}
+    <div className="kpi-card">
+      <div className="kpi-label">{label}</div>
+      <div className="kpi-value">{value}</div>
+      {sub && <div className="kpi-sub" style={{ color }}>{sub}</div>}
     </div>
   );
 }
 
-interface AIAction {
-  id: string;
-  description: string;
-  action: string;
-  payload: any;
-  status: 'pending' | 'approved' | 'rejected' | 'executed';
-}
+// ─── Action Card ──────────────────────────────────────────────────────────────
+interface AIAction { id: string; description: string; action: string; payload: any; status: 'pending' | 'approved' | 'rejected' | 'executed'; }
 
 function ActionCard({ action, onApprove, onReject }: { action: AIAction; onApprove: () => void; onReject: () => void }) {
   return (
-    <div style={{ background: '#111827', border: '1px solid #f59e0b40', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+    <div className="action-card">
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }}></div>
-        <span style={{ fontSize: 12, color: '#f59e0b', fontWeight: 600 }}>AI Actie Voorstel</span>
+        <div className="dot dot-amber pulse" />
+        <span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Voorstel</span>
       </div>
-      <div style={{ fontSize: 13, color: '#f9fafb', marginBottom: 12, lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: renderMessage(action.description) }} />
+      <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.6 }}
+        dangerouslySetInnerHTML={{ __html: renderMessage(action.description) }} />
       {action.status === 'pending' && (
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={onApprove} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>✅ Goedkeuren</button>
-          <button onClick={onReject} style={{ padding: '8px 16px', background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>❌ Afwijzen</button>
+          <button onClick={onApprove} style={{ padding: '8px 16px', background: 'var(--green-dim)', color: 'var(--green)', border: '1px solid var(--green)40', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font)', transition: 'opacity 0.15s' }}>
+            Goedkeuren
+          </button>
+          <button onClick={onReject} style={{ padding: '8px 16px', background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid var(--red)40', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font)' }}>
+            Afwijzen
+          </button>
         </div>
       )}
-      {action.status === 'executed' && <div style={{ fontSize: 12, color: '#10b981' }}>✅ Uitgevoerd</div>}
-      {action.status === 'rejected' && <div style={{ fontSize: 12, color: '#ef4444' }}>❌ Afgewezen</div>}
+      {action.status === 'executed' && <span className="badge badge-green">✓ Uitgevoerd</span>}
+      {action.status === 'rejected' && <span className="badge badge-red">✕ Afgewezen</span>}
     </div>
   );
 }
 
+// ─── Chat Component ───────────────────────────────────────────────────────────
+function ChatBox({ messages, input, setInput, send, loading, chatRef, compact = false }: any) {
+  return (
+    <div className="chat-wrap">
+      <div className="chat-messages" ref={chatRef} style={{ maxHeight: compact ? 240 : 400, minHeight: compact ? 140 : 200 }}>
+        {messages.map((m: any, i: number) => (
+          <div key={i} className={`msg-bubble ${m.role}`}
+            dangerouslySetInnerHTML={{ __html: renderMessage(m.content) }} />
+        ))}
+        {loading && (
+          <div className="msg-bubble assistant" style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 16px' }}>
+            <span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" />
+          </div>
+        )}
+      </div>
+      <div className="chat-input-row">
+        <input className="chat-input" value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !loading && send()}
+          placeholder={compact ? 'Vraag iets...' : 'Vraag de AI om iets te analyseren of voor te stellen...'} />
+        <button className="chat-send" onClick={send} disabled={loading || !input.trim()}>
+          {loading ? '...' : 'Stuur'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── SEO Page ─────────────────────────────────────────────────────────────────
 function SEOPage() {
   const [seoData, setSeoData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -75,61 +331,60 @@ function SEOPage() {
     fetch('/api/seo').then(r => r.json()).then(d => { setSeoData(d); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
-  const scoreColor = !seoData ? '#6b7280' : seoData.score >= 80 ? '#10b981' : seoData.score >= 60 ? '#f59e0b' : '#ef4444';
+  const scoreColor = !seoData ? 'var(--text-muted)' : seoData.score >= 80 ? 'var(--green)' : seoData.score >= 60 ? 'var(--amber)' : 'var(--red)';
 
   return (
     <div>
       {loading && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#6b7280', fontSize: 13 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#00c2ff', boxShadow: '0 0 6px #00c2ff' }}></div>
-          SEO scan bezig... dit kan even duren
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', fontSize: 13 }}>
+          <div className="dot dot-cyan pulse" /> SEO scan bezig...
         </div>
       )}
       {seoData && !loading && (
-        <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
-            <div style={{ background: '#111827', border: `1px solid ${scoreColor}40`, borderRadius: 12, padding: '18px 20px' }}>
-              <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>SEO Score</div>
-              <div style={{ fontSize: 40, fontWeight: 800, color: scoreColor }}>{seoData.score}</div>
-              <div style={{ fontSize: 12, color: scoreColor, marginTop: 4 }}>/100</div>
+        <div style={{ animation: 'fadeUp 0.3s ease' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
+            <div className="kpi-card" style={{ borderColor: `${scoreColor}40` }}>
+              <div className="kpi-label">SEO Score</div>
+              <div style={{ fontSize: 44, fontWeight: 800, color: scoreColor, letterSpacing: '-0.04em', lineHeight: 1 }}>{seoData.score}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>/100 punten</div>
             </div>
-            <KpiCard label="Pagina's gescand" value={String(seoData.totalPages)} sub="Producten + collecties" color="#6366f1" />
-            <KpiCard label="Kritieke problemen" value={String(seoData.highCount)} sub="Hoge prioriteit" color="#ef4444" />
-            <KpiCard label="Waarschuwingen" value={String(seoData.mediumCount)} sub="Medium prioriteit" color="#f59e0b" />
+            <KpiCard label="Pagina's gescand" value={String(seoData.totalPages)} sub="Producten + collecties" color="var(--purple)" />
+            <KpiCard label="Kritieke problemen" value={String(seoData.highCount)} sub="Hoge prioriteit" color="var(--red)" />
+            <KpiCard label="Waarschuwingen" value={String(seoData.mediumCount)} sub="Medium prioriteit" color="var(--amber)" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }}></div>
-            <span style={{ fontSize: 12, color: '#6b7280' }}>Laatste scan: {new Date(seoData.lastScanned).toLocaleString('nl-NL')}</span>
-            <button onClick={() => { setLoading(true); fetch('/api/seo').then(r => r.json()).then(d => { setSeoData(d); setLoading(false); }); }}
-              style={{ padding: '4px 12px', background: '#0070f320', border: '1px solid #0070f340', borderRadius: 6, color: '#00c2ff', fontSize: 11, cursor: 'pointer', marginLeft: 8 }}>
-              ↻ Opnieuw scannen
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <div className="dot dot-green" />
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Laatste scan: {new Date(seoData.lastScanned).toLocaleString('nl-NL')}</span>
+            <button className="pill-btn" style={{ fontSize: 11, padding: '4px 12px' }}
+              onClick={() => { setLoading(true); fetch('/api/seo').then(r => r.json()).then(d => { setSeoData(d); setLoading(false); }); }}>
+              ↻ Opnieuw
             </button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {seoData.issues.length === 0 && (
-              <div style={{ background: '#111827', border: '1px solid #10b98140', borderRadius: 12, padding: 20, color: '#10b981', fontSize: 13, textAlign: 'center' }}>
-                ✅ Geen SEO problemen gevonden! Je website is goed geoptimaliseerd.
+              <div className="panel" style={{ borderColor: 'var(--green)30', color: 'var(--green)', textAlign: 'center', fontSize: 13 }}>
+                ✓ Geen problemen gevonden. Alles ziet er goed uit.
               </div>
             )}
             {seoData.issues.map((p: any, i: number) => (
-              <div key={i} style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div>
-                    <span style={{ fontSize: 11, color: p.page_type === 'product' ? '#6366f1' : '#f59e0b', background: p.page_type === 'product' ? '#6366f120' : '#f59e0b20', padding: '2px 8px', borderRadius: 4, marginRight: 8 }}>
+              <div key={i} className="panel" style={{ animation: `fadeUp ${0.1 + i * 0.05}s ease` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className={`badge ${p.page_type === 'product' ? 'badge-blue' : 'badge-amber'}`}>
                       {p.page_type === 'product' ? 'Product' : 'Collectie'}
                     </span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#f9fafb' }}>{p.page_title}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{p.page_title}</span>
                   </div>
-                  <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#00c2ff', textDecoration: 'none' }}>→ Bekijk pagina</a>
+                  <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--cyan)', textDecoration: 'none', opacity: 0.8 }}>Bekijk →</a>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {p.issues.map((issue: any, j: number) => (
-                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#0d1117', borderRadius: 8 }}>
-                      <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: issue.severity === 'hoog' ? '#ef444420' : '#f59e0b20', color: issue.severity === 'hoog' ? '#ef4444' : '#f59e0b', flexShrink: 0 }}>
-                        {issue.severity === 'hoog' ? '🔴 Hoog' : '🟡 Medium'}
+                    <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 12px', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                      <span className={`badge ${issue.severity === 'hoog' ? 'badge-red' : 'badge-amber'}`} style={{ flexShrink: 0, marginTop: 1 }}>
+                        {issue.severity === 'hoog' ? 'Hoog' : 'Medium'}
                       </span>
-                      <span style={{ fontSize: 12, color: '#9ca3af', flex: 1 }}>{issue.message}</span>
-                      {issue.suggestion && <span style={{ fontSize: 11, color: '#10b981' }}>→ {issue.suggestion}</span>}
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)', flex: 1 }}>{issue.message}</span>
+                      {issue.suggestion && <span style={{ fontSize: 11, color: 'var(--green)', flexShrink: 0 }}>{issue.suggestion}</span>}
                     </div>
                   ))}
                 </div>
@@ -142,6 +397,7 @@ function SEOPage() {
   );
 }
 
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [page, setPage] = useState('dashboard');
   const [messages, setMessages] = useState([
@@ -173,20 +429,16 @@ export default function Dashboard() {
     if (!action) return;
     setPendingActions(prev => prev.map(a => a.id === actionId ? { ...a, status: 'executed' } : a));
     try {
-      await fetch('/api/actions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: action.action, payload: action.payload }),
-      });
-      setMessages(prev => [...prev, { role: 'assistant', content: `✅ Actie uitgevoerd: ${action.description}` }]);
+      await fetch('/api/actions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action.action, payload: action.payload }) });
+      setMessages(prev => [...prev, { role: 'assistant', content: `✓ Uitgevoerd: ${action.description}` }]);
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: '❌ Er ging iets mis bij het uitvoeren van de actie.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: '✕ Er ging iets mis.' }]);
     }
   }
 
   function rejectAction(actionId: string) {
     setPendingActions(prev => prev.map(a => a.id === actionId ? { ...a, status: 'rejected' } : a));
-    setMessages(prev => [...prev, { role: 'assistant', content: 'Ok, ik sla deze actie over. Laat me weten als je iets anders wil.' }]);
+    setMessages(prev => [...prev, { role: 'assistant', content: 'Ok, ik sla deze actie over.' }]);
   }
 
   async function send() {
@@ -197,19 +449,12 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: msgs.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })) })
       });
       const data = await res.json();
       if (data.action) {
-        const newAction: AIAction = {
-          id: Date.now().toString(),
-          description: data.action.description,
-          action: data.action.type,
-          payload: data.action.payload,
-          status: 'pending',
-        };
+        const newAction: AIAction = { id: Date.now().toString(), description: data.action.description, action: data.action.type, payload: data.action.payload, status: 'pending' };
         setPendingActions(prev => [...prev, newAction]);
       }
       setMessages([...msgs, { role: 'assistant', content: data.content }]);
@@ -225,376 +470,327 @@ export default function Dashboard() {
   const metaSpend = metaData?.spend || '0';
   const metaImpressions = metaData?.impressions || '0';
   const metaClicks = metaData?.clicks || '0';
+  const pendingCount = pendingActions.filter(a => a.status === 'pending').length;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0e1a', color: '#f9fafb', fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <div style={{ width: 220, background: '#0d1117', borderRight: '1px solid #1f2937', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
-        <div style={{ padding: '0 20px 28px', borderBottom: '1px solid #1f2937' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, background: 'linear-gradient(135deg, #00c2ff, #0070f3)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>❄</div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#f9fafb' }}>CryoWipes AI</div>
-              <div style={{ fontSize: 11, color: '#6b7280' }}>Dashboard</div>
+    <>
+      <style>{css}</style>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+
+        {/* ── Sidebar ── */}
+        <div className="sidebar">
+          {/* Logo */}
+          <div style={{ padding: '24px 20px 22px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 34, height: 34, background: 'var(--gradient)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>❄</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.01em' }}>CryoWipes</div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontFamily: 'var(--mono)', marginTop: 1 }}>AI Dashboard</div>
+              </div>
             </div>
           </div>
-        </div>
-        <nav style={{ padding: '16px 12px', flex: 1 }}>
-          {NAV.map(n => (
-            <button key={n.id} onClick={() => setPage(n.id)} style={{
-              display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px',
-              borderRadius: 8, border: 'none', cursor: 'pointer', marginBottom: 2, textAlign: 'left',
-              background: page === n.id ? 'linear-gradient(90deg, #0070f320, #00c2ff10)' : 'transparent',
-              color: page === n.id ? '#00c2ff' : '#9ca3af',
-              fontWeight: page === n.id ? 600 : 400, fontSize: 14,
-              borderLeft: page === n.id ? '2px solid #00c2ff' : '2px solid transparent',
-            }}>
-              <span style={{ fontSize: 16 }}>{n.icon}</span> {n.label}
-              {n.id === 'ai' && pendingActions.filter(a => a.status === 'pending').length > 0 && (
-                <span style={{ marginLeft: 'auto', background: '#f59e0b', color: '#000', borderRadius: '50%', width: 18, height: 18, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                  {pendingActions.filter(a => a.status === 'pending').length}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-        <div style={{ padding: '16px 20px', borderTop: '1px solid #1f2937' }}>
-          <div style={{ fontSize: 11, color: '#6b7280' }}>cryowipes.store</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }}></div>
-            <span style={{ fontSize: 12, color: '#10b981' }}>AI Actief</span>
-          </div>
-        </div>
-      </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-        <div style={{ padding: '20px 28px', borderBottom: '1px solid #1f2937', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0d1117' }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#f9fafb' }}>{NAV.find(n => n.id === page)?.label || 'Dashboard'}</div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>Realtime overzicht van al je kanalen</div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 8, padding: '6px 14px', fontSize: 12, color: '#9ca3af' }}>Laatste 7 dagen</div>
-            <div onClick={() => setPage('ai')} style={{ background: 'linear-gradient(135deg, #0070f3, #00c2ff)', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', position: 'relative' }}>
-              ◈ AI Agent
-              {pendingActions.filter(a => a.status === 'pending').length > 0 && (
-                <span style={{ position: 'absolute', top: -6, right: -6, background: '#f59e0b', color: '#000', borderRadius: '50%', width: 16, height: 16, fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                  {pendingActions.filter(a => a.status === 'pending').length}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ padding: 28, flex: 1 }}>
-
-          {page === 'dashboard' && (
-            <div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-                <KpiCard label="Totale omzet" value={`$${revenue}`} sub={`${orders} orders`} color="#10b981" />
-                <KpiCard label="Orders" value={String(orders)} sub="Laatste 7 dagen" color="#10b981" />
-                <KpiCard label="AOV" value={`$${aov}`} sub="Gem. orderwaarde" color="#10b981" />
-                <KpiCard label="Meta Spend" value={`$${metaSpend}`} sub={`${metaImpressions} impressies`} color="#f59e0b" />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Omzet over tijd</div>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <LineChart data={revenueData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                      <XAxis dataKey="dag" stroke="#4b5563" tick={{ fontSize: 11 }} />
-                      <YAxis stroke="#4b5563" tick={{ fontSize: 11 }} />
-                      <Tooltip contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }} />
-                      <Line type="monotone" dataKey="omzet" stroke="#00c2ff" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Meta Ads prestaties</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    {[
-                      { label: 'Spend', value: `$${metaSpend}` },
-                      { label: 'Impressies', value: Number(metaImpressions).toLocaleString() },
-                      { label: 'Clicks', value: metaClicks },
-                      { label: 'CTR', value: metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%' },
-                    ].map(s => (
-                      <div key={s.label} style={{ background: '#0d1117', borderRadius: 8, padding: '12px 14px' }}>
-                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>{s.label}</div>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: '#f9fafb' }}>{s.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>◈ AI Manager</div>
-                <div ref={chatRef} style={{ maxHeight: 220, overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {messages.map((m, i) => (
-                    <div key={i} style={{
-                      padding: '10px 14px', borderRadius: 10, fontSize: 13, lineHeight: 1.6, maxWidth: '85%',
-                      alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                      background: m.role === 'user' ? 'linear-gradient(135deg, #0070f3, #00c2ff)' : '#0d1117',
-                      color: '#f9fafb',
-                    }} dangerouslySetInnerHTML={{ __html: renderMessage(m.content) }} />
-                  ))}
-                  {loading && <div style={{ padding: '10px 14px', borderRadius: 10, fontSize: 13, background: '#0d1117', color: '#6b7280', alignSelf: 'flex-start' }}>Bezig...</div>}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()}
-                    placeholder="Vraag iets aan je AI manager..."
-                    style={{ flex: 1, padding: '10px 14px', background: '#0d1117', color: '#f9fafb', border: '1px solid #1f2937', borderRadius: 8, fontSize: 13, outline: 'none' }} />
-                  <button onClick={send} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #0070f3, #00c2ff)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Stuur</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {page === 'ai' && (
-            <div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>
-                    Openstaande acties
-                    {pendingActions.filter(a => a.status === 'pending').length > 0 && (
-                      <span style={{ marginLeft: 8, background: '#f59e0b', color: '#000', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>
-                        {pendingActions.filter(a => a.status === 'pending').length} wachtend
-                      </span>
-                    )}
-                  </div>
-                  {pendingActions.length === 0 && (
-                    <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20, color: '#6b7280', fontSize: 13 }}>
-                      Geen openstaande acties. Vraag de AI om iets te analyseren of aan te passen.
-                    </div>
-                  )}
-                  {pendingActions.map(a => (
-                    <ActionCard key={a.id} action={a} onApprove={() => approveAction(a.id)} onReject={() => rejectAction(a.id)} />
-                  ))}
-                </div>
-                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>◈ AI Agent Chat</div>
-                  <div ref={chatRef} style={{ height: 350, overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {messages.map((m, i) => (
-                      <div key={i} style={{
-                        padding: '10px 14px', borderRadius: 10, fontSize: 13, lineHeight: 1.6, maxWidth: '90%',
-                        alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                        background: m.role === 'user' ? 'linear-gradient(135deg, #0070f3, #00c2ff)' : '#0d1117',
-                        color: '#f9fafb',
-                      }} dangerouslySetInnerHTML={{ __html: renderMessage(m.content) }} />
-                    ))}
-                    {loading && <div style={{ padding: '10px 14px', borderRadius: 10, fontSize: 13, background: '#0d1117', color: '#6b7280', alignSelf: 'flex-start' }}>Bezig...</div>}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()}
-                      placeholder="Vraag de AI om iets te analyseren of voor te stellen..."
-                      style={{ flex: 1, padding: '10px 14px', background: '#0d1117', color: '#f9fafb', border: '1px solid #1f2937', borderRadius: 8, fontSize: 13, outline: 'none' }} />
-                    <button onClick={send} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #0070f3, #00c2ff)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Stuur</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {page === 'shopify' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111827', border: '1px solid #1f2937', borderRadius: 8, padding: '6px 12px' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }}></div>
-                  <span style={{ fontSize: 12, color: '#10b981', fontWeight: 600 }}>Live</span>
-                  <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 4 }}>Laatst bijgewerkt: zojuist</span>
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 20 }}>
-                <KpiCard label="Totale omzet" value={`$${revenue}`} sub={`${orders} orders`} color="#10b981" />
-                <KpiCard label="Orders" value={String(orders)} sub="Alle orders" color="#10b981" />
-                <KpiCard label="AOV" value={`$${aov}`} sub="Gem. waarde" color="#10b981" />
-                <KpiCard label="Omzet vandaag" value={`$${shopifyData?.todayRevenue || '0.00'}`} sub={`${shopifyData?.todayOrders || 0} vandaag`} color="#10b981" />
-                <KpiCard label="Klanten" value={String(shopifyData?.totalCustomers || 0)} sub="Totaal" color="#6366f1" />
-                <KpiCard label="Producten" value={String(shopifyData?.totalProducts || 0)} sub="In catalogus" color="#6366f1" />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
-                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Omzet over tijd</div>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <LineChart data={revenueData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                      <XAxis dataKey="dag" stroke="#4b5563" tick={{ fontSize: 11 }} />
-                      <YAxis stroke="#4b5563" tick={{ fontSize: 11 }} />
-                      <Tooltip contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }} />
-                      <Line type="monotone" dataKey="omzet" stroke="#00c2ff" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: '#f9fafb' }}>Live bezoekers</div>
-                  <div style={{ fontSize: 36, fontWeight: 800, color: '#10b981', marginBottom: 4 }}>—</div>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 16 }}>Niet beschikbaar via API</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#9ca3af', marginBottom: 10 }}>Snelle links</div>
-                  {[
-                    { label: 'Orders', url: 'https://admin.shopify.com/store/cryowipes/orders' },
-                    { label: 'Producten', url: 'https://admin.shopify.com/store/cryowipes/products' },
-                    { label: 'Klanten', url: 'https://admin.shopify.com/store/cryowipes/customers' },
-                  ].map(l => (
-                    <a key={l.label} href={l.url} target="_blank" rel="noreferrer" style={{ display: 'block', padding: '6px 0', borderBottom: '1px solid #1f2937', fontSize: 12, color: '#00c2ff', textDecoration: 'none' }}>
-                      → {l.label}
-                    </a>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Producten</div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #1f2937' }}>
-                        {['Product', 'Prijs', 'Voorraad'].map(h => (
-                          <th key={h} style={{ padding: '8px 0', color: '#6b7280', fontWeight: 500, textAlign: 'left' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(shopifyData?.products || []).slice(0, 6).map((p: any) => (
-                        <tr key={p.id} style={{ borderBottom: '1px solid #1f2937' }}>
-                          <td style={{ padding: '10px 0', color: '#f9fafb' }}>{p.title}</td>
-                          <td style={{ padding: '10px 0', color: '#00c2ff', fontWeight: 600 }}>${p.price}</td>
-                          <td style={{ padding: '10px 0' }}>
-                            <span style={{ background: p.inventory > 10 ? '#10b98120' : '#ef444420', color: p.inventory > 10 ? '#10b981' : '#ef4444', padding: '2px 8px', borderRadius: 4, fontSize: 11 }}>{p.inventory} stuks</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Recente orders</div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #1f2937' }}>
-                        {['Order', 'Datum', 'Bedrag', 'Status'].map(h => (
-                          <th key={h} style={{ padding: '8px 0', color: '#6b7280', fontWeight: 500, textAlign: 'left' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(shopifyData?.recentOrders || []).map((o: any) => (
-                        <tr key={o.id} style={{ borderBottom: '1px solid #1f2937' }}>
-                          <td style={{ padding: '10px 0', color: '#00c2ff', fontWeight: 600 }}>{o.id}</td>
-                          <td style={{ padding: '10px 0', color: '#9ca3af' }}>{o.date}</td>
-                          <td style={{ padding: '10px 0', color: '#f9fafb' }}>${o.total}</td>
-                          <td style={{ padding: '10px 0' }}>
-                            <span style={{ background: o.status === 'fulfilled' ? '#10b98120' : '#f59e0b20', color: o.status === 'fulfilled' ? '#10b981' : '#f59e0b', padding: '2px 8px', borderRadius: 4, fontSize: 11 }}>
-                              {o.status === 'fulfilled' ? 'Verzonden' : 'In behandeling'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {page === 'meta' && (
-            <div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
-                <KpiCard label="Spend" value={`$${metaSpend}`} sub="Laatste 7 dagen" color="#f59e0b" />
-                <KpiCard label="Impressies" value={Number(metaImpressions).toLocaleString()} sub="Laatste 7 dagen" color="#6366f1" />
-                <KpiCard label="Clicks" value={metaClicks} sub="Laatste 7 dagen" color="#6366f1" />
-                <KpiCard label="CTR" value={metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%'} sub="Click-through rate" color="#10b981" />
-                <KpiCard label="CPC" value={metaData?.cpc ? `$${parseFloat(metaData.cpc).toFixed(2)}` : '$0'} sub="Kosten per klik" color="#f59e0b" />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
-                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Prestaties over tijd</div>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={revenueData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                      <XAxis dataKey="dag" stroke="#4b5563" tick={{ fontSize: 11 }} />
-                      <YAxis stroke="#4b5563" tick={{ fontSize: 11 }} />
-                      <Tooltip contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }} />
-                      <Line type="monotone" dataKey="omzet" stroke="#6366f1" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Account overzicht</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {[
-                      { label: 'Spend', value: `$${metaSpend}`, color: '#f59e0b' },
-                      { label: 'Impressies', value: Number(metaImpressions).toLocaleString(), color: '#6366f1' },
-                      { label: 'Clicks', value: metaClicks, color: '#00c2ff' },
-                      { label: 'CTR', value: metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%', color: '#10b981' },
-                    ].map(s => (
-                      <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#0d1117', borderRadius: 8 }}>
-                        <span style={{ fontSize: 13, color: '#9ca3af' }}>{s.label}</span>
-                        <span style={{ fontSize: 15, fontWeight: 700, color: s.color }}>{s.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #1f2937' }}>
-                    <a href="https://adsmanager.facebook.com" target="_blank" rel="noreferrer" style={{ display: 'block', padding: '8px 12px', background: '#0070f320', border: '1px solid #0070f340', borderRadius: 8, color: '#00c2ff', fontSize: 12, textDecoration: 'none' }}>
-                      → Open Meta Ads Manager
-                    </a>
-                  </div>
-                </div>
-              </div>
-              <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#f9fafb' }}>Campagnes</div>
-                  <a href="https://adsmanager.facebook.com" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#00c2ff', textDecoration: 'none' }}>Bekijk alle →</a>
-                </div>
-                {metaData?.campaigns && metaData.campaigns.length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #1f2937' }}>
-                        {['Campagne', 'Status', 'Budget', 'Acties'].map(h => (
-                          <th key={h} style={{ padding: '8px 0', color: '#6b7280', fontWeight: 500, textAlign: 'left' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {metaData.campaigns.map((c: any) => (
-                        <tr key={c.id} style={{ borderBottom: '1px solid #1f2937' }}>
-                          <td style={{ padding: '12px 0', color: '#f9fafb', fontWeight: 500 }}>{c.name}</td>
-                          <td style={{ padding: '12px 0' }}>
-                            <span style={{ background: c.status === 'ACTIVE' ? '#10b98120' : '#f59e0b20', color: c.status === 'ACTIVE' ? '#10b981' : '#f59e0b', padding: '2px 8px', borderRadius: 4, fontSize: 11 }}>
-                              {c.status === 'ACTIVE' ? 'Actief' : 'Gepauzeerd'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px 0', color: '#9ca3af' }}>{c.daily_budget ? `$${(parseInt(c.daily_budget) / 100).toFixed(2)}/dag` : 'Lifetime'}</td>
-                          <td style={{ padding: '12px 0' }}>
-                            <button style={{ padding: '4px 10px', background: '#10b98120', color: '#10b981', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
-                              {c.status === 'ACTIVE' ? '⏸ Pauzeer' : '▶ Hervat'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div style={{ color: '#6b7280', fontSize: 13, padding: '20px 0', textAlign: 'center' }}>Geen campagnes gevonden.</div>
+          {/* Nav */}
+          <nav style={{ padding: '14px 12px', flex: 1 }}>
+            {NAV.map(n => (
+              <button key={n.id} className={`nav-btn ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)}>
+                <span style={{ fontSize: 15, width: 20, textAlign: 'center' }}>{n.icon}</span>
+                {n.label}
+                {n.id === 'ai' && pendingCount > 0 && (
+                  <span style={{ marginLeft: 'auto', background: 'var(--amber)', color: '#000', borderRadius: 20, minWidth: 18, height: 18, padding: '0 5px', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                    {pendingCount}
+                  </span>
                 )}
+              </button>
+            ))}
+          </nav>
+
+          {/* Status */}
+          <div style={{ padding: '14px 18px', borderTop: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--mono)', marginBottom: 6 }}>cryowipes.store</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className="dot dot-green pulse" />
+              <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 500 }}>AI Actief</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Main ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', minWidth: 0 }}>
+
+          {/* Header */}
+          <div style={{ padding: '18px 28px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-panel)', flexShrink: 0 }}>
+            <div>
+              <div style={{ fontSize: 19, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+                {NAV.find(n => n.id === page)?.label || 'Dashboard'}
               </div>
-              <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>◈ AI Inzichten</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {['Analyseer mijn Meta campagnes', 'Welke campagne moet ik pauzeren?', 'Hoe kan ik mijn CTR verbeteren?', 'Stel een budget optimalisatie voor'].map(q => (
-                    <button key={q} onClick={() => { setInput(q); setPage('ai'); }} style={{ padding: '8px 14px', background: '#0d1117', border: '1px solid #1f2937', borderRadius: 8, color: '#9ca3af', fontSize: 12, cursor: 'pointer' }}>{q}</button>
-                  ))}
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Realtime overzicht van al je kanalen</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '6px 12px' }}>
+                <div className="dot dot-green" />
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Live · 30s</span>
+              </div>
+              <button onClick={() => setPage('ai')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--gradient)', border: 'none', borderRadius: 'var(--radius-sm)', padding: '8px 16px', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font)', position: 'relative' }}>
+                ◈ AI Agent
+                {pendingCount > 0 && (
+                  <span style={{ position: 'absolute', top: -6, right: -6, background: 'var(--amber)', color: '#000', borderRadius: '50%', width: 16, height: 16, fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div style={{ padding: 28, flex: 1 }}>
+
+            {/* ── Dashboard ── */}
+            {page === 'dashboard' && (
+              <div style={{ animation: 'fadeUp 0.3s ease' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 22 }}>
+                  <KpiCard label="Totale omzet" value={`$${revenue}`} sub={`${orders} orders`} color="var(--green)" />
+                  <KpiCard label="Orders" value={String(orders)} sub="Laatste 7 dagen" color="var(--green)" />
+                  <KpiCard label="Gem. orderwaarde" value={`$${aov}`} sub="AOV" color="var(--cyan)" />
+                  <KpiCard label="Meta Spend" value={`$${metaSpend}`} sub={`${Number(metaImpressions).toLocaleString()} impressies`} color="var(--amber)" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 22 }}>
+                  <div className="panel">
+                    <div className="panel-title">Omzet afgelopen week</div>
+                    <ResponsiveContainer width="100%" height={170}>
+                      <LineChart data={revenueData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                        <XAxis dataKey="dag" stroke="var(--border)" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+                        <YAxis stroke="var(--border)" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+                        <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--text)' }} />
+                        <Line type="monotone" dataKey="omzet" stroke="var(--cyan)" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="panel">
+                    <div className="panel-title">Meta Ads overzicht</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      {[
+                        { label: 'Spend', value: `$${metaSpend}` },
+                        { label: 'Impressies', value: Number(metaImpressions).toLocaleString() },
+                        { label: 'Clicks', value: metaClicks },
+                        { label: 'CTR', value: metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%' },
+                      ].map(s => (
+                        <div key={s.label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
+                          <div style={{ fontSize: 10.5, color: 'var(--text-muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+                          <div style={{ fontSize: 21, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>{s.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="panel">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>◈ AI Manager</span>
+                    <div className="dot dot-cyan pulse" />
+                  </div>
+                  <ChatBox messages={messages} input={input} setInput={setInput} send={send} loading={loading} chatRef={chatRef} compact />
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {page === 'seo' && <SEOPage />}
+            {/* ── AI Agent ── */}
+            {page === 'ai' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, animation: 'fadeUp 0.3s ease' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Openstaande acties</span>
+                    {pendingCount > 0 && <span className="badge badge-amber">{pendingCount} wachtend</span>}
+                  </div>
+                  {pendingActions.length === 0 ? (
+                    <div className="panel" style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: 28 }}>
+                      Geen openstaande acties.<br />
+                      <span style={{ fontSize: 12, marginTop: 4, display: 'block' }}>Vraag de AI om iets te analyseren of voor te stellen.</span>
+                    </div>
+                  ) : (
+                    pendingActions.map(a => <ActionCard key={a.id} action={a} onApprove={() => approveAction(a.id)} onReject={() => rejectAction(a.id)} />)
+                  )}
+                </div>
+                <div className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    <span className="panel-title" style={{ margin: 0 }}>◈ AI Agent</span>
+                    <div className="dot dot-cyan pulse" />
+                  </div>
+                  <ChatBox messages={messages} input={input} setInput={setInput} send={send} loading={loading} chatRef={chatRef} />
+                </div>
+              </div>
+            )}
 
-          {page !== 'dashboard' && page !== 'shopify' && page !== 'ai' && page !== 'meta' && page !== 'seo' && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#4b5563', fontSize: 14 }}>
-              {NAV.find(n => n.id === page)?.label} pagina — komt binnenkort
-            </div>
-          )}
+            {/* ── Shopify ── */}
+            {page === 'shopify' && (
+              <div style={{ animation: 'fadeUp 0.3s ease' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 12, marginBottom: 20 }}>
+                  <KpiCard label="Totale omzet" value={`$${revenue}`} sub={`${orders} orders`} color="var(--green)" />
+                  <KpiCard label="Orders" value={String(orders)} sub="Alle orders" color="var(--green)" />
+                  <KpiCard label="AOV" value={`$${aov}`} sub="Gem. waarde" color="var(--cyan)" />
+                  <KpiCard label="Vandaag" value={`$${shopifyData?.todayRevenue || '0.00'}`} sub={`${shopifyData?.todayOrders || 0} orders`} color="var(--green)" />
+                  <KpiCard label="Klanten" value={String(shopifyData?.totalCustomers || 0)} sub="Totaal" color="var(--purple)" />
+                  <KpiCard label="Producten" value={String(shopifyData?.totalProducts || 0)} sub="In catalogus" color="var(--purple)" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+                  <div className="panel">
+                    <div className="panel-title">Omzet over tijd</div>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <LineChart data={revenueData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                        <XAxis dataKey="dag" stroke="var(--border)" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+                        <YAxis stroke="var(--border)" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+                        <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--text)' }} />
+                        <Line type="monotone" dataKey="omzet" stroke="var(--cyan)" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="panel">
+                    <div className="panel-title">Snelle links</div>
+                    {[
+                      { label: 'Orders', url: 'https://admin.shopify.com/store/cryowipes/orders' },
+                      { label: 'Producten', url: 'https://admin.shopify.com/store/cryowipes/products' },
+                      { label: 'Klanten', url: 'https://admin.shopify.com/store/cryowipes/customers' },
+                    ].map(l => (
+                      <a key={l.label} href={l.url} target="_blank" rel="noreferrer"
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 0', borderBottom: '1px solid var(--border)', fontSize: 13, color: 'var(--text-dim)', textDecoration: 'none', transition: 'color 0.15s' }}
+                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--cyan)')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
+                        {l.label} <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>↗</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div className="panel">
+                    <div className="panel-title">Producten</div>
+                    <table className="data-table">
+                      <thead><tr>{['Product', 'Prijs', 'Voorraad'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+                      <tbody>
+                        {(shopifyData?.products || []).slice(0, 6).map((p: any) => (
+                          <tr key={p.id}>
+                            <td style={{ color: 'var(--text)' }}>{p.title}</td>
+                            <td style={{ color: 'var(--cyan)', fontWeight: 600, fontFamily: 'var(--mono)', fontSize: 12 }}>${p.price}</td>
+                            <td><span className={`badge ${p.inventory > 10 ? 'badge-green' : 'badge-red'}`}>{p.inventory}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="panel">
+                    <div className="panel-title">Recente orders</div>
+                    <table className="data-table">
+                      <thead><tr>{['Order', 'Datum', 'Bedrag', 'Status'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+                      <tbody>
+                        {(shopifyData?.recentOrders || []).map((o: any) => (
+                          <tr key={o.id}>
+                            <td style={{ color: 'var(--cyan)', fontFamily: 'var(--mono)', fontSize: 11 }}>{o.id}</td>
+                            <td>{o.date}</td>
+                            <td style={{ color: 'var(--text)', fontWeight: 500 }}>${o.total}</td>
+                            <td><span className={`badge ${o.status === 'fulfilled' ? 'badge-green' : 'badge-amber'}`}>{o.status === 'fulfilled' ? 'Verzonden' : 'In behandeling'}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
 
+            {/* ── Meta Ads ── */}
+            {page === 'meta' && (
+              <div style={{ animation: 'fadeUp 0.3s ease' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 20 }}>
+                  <KpiCard label="Spend" value={`$${metaSpend}`} sub="Laatste 7 dagen" color="var(--amber)" />
+                  <KpiCard label="Impressies" value={Number(metaImpressions).toLocaleString()} sub="Laatste 7 dagen" color="var(--purple)" />
+                  <KpiCard label="Clicks" value={metaClicks} sub="Laatste 7 dagen" color="var(--cyan)" />
+                  <KpiCard label="CTR" value={metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%'} sub="Click-through rate" color="var(--green)" />
+                  <KpiCard label="CPC" value={metaData?.cpc ? `$${parseFloat(metaData.cpc).toFixed(2)}` : '$0'} sub="Kosten per klik" color="var(--amber)" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+                  <div className="panel">
+                    <div className="panel-title">Prestaties over tijd</div>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={revenueData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                        <XAxis dataKey="dag" stroke="var(--border)" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+                        <YAxis stroke="var(--border)" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+                        <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--text)' }} />
+                        <Line type="monotone" dataKey="omzet" stroke="var(--purple)" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="panel">
+                    <div className="panel-title">Account overzicht</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {[
+                        { label: 'Spend', value: `$${metaSpend}`, color: 'var(--amber)' },
+                        { label: 'Impressies', value: Number(metaImpressions).toLocaleString(), color: 'var(--purple)' },
+                        { label: 'Clicks', value: metaClicks, color: 'var(--cyan)' },
+                        { label: 'CTR', value: metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%', color: 'var(--green)' },
+                      ].map(s => (
+                        <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{s.label}</span>
+                          <span style={{ fontSize: 15, fontWeight: 700, color: s.color, fontFamily: 'var(--mono)' }}>{s.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <a href="https://adsmanager.facebook.com" target="_blank" rel="noreferrer"
+                      style={{ display: 'block', marginTop: 14, padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--cyan)', fontSize: 12, textDecoration: 'none', textAlign: 'center', transition: 'border-color 0.15s' }}>
+                      Open Meta Ads Manager ↗
+                    </a>
+                  </div>
+                </div>
+                <div className="panel" style={{ marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div className="panel-title" style={{ margin: 0 }}>Campagnes</div>
+                    <a href="https://adsmanager.facebook.com" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--cyan)', textDecoration: 'none' }}>Bekijk alle →</a>
+                  </div>
+                  {metaData?.campaigns?.length > 0 ? (
+                    <table className="data-table">
+                      <thead><tr>{['Campagne', 'Status', 'Budget', 'Actie'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+                      <tbody>
+                        {metaData.campaigns.map((c: any) => (
+                          <tr key={c.id}>
+                            <td style={{ color: 'var(--text)', fontWeight: 500 }}>{c.name}</td>
+                            <td><span className={`badge ${c.status === 'ACTIVE' ? 'badge-green' : 'badge-amber'}`}>{c.status === 'ACTIVE' ? 'Actief' : 'Gepauzeerd'}</span></td>
+                            <td style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>{c.daily_budget ? `$${(parseInt(c.daily_budget) / 100).toFixed(2)}/dag` : 'Lifetime'}</td>
+                            <td>
+                              <button className="pill-btn" style={{ fontSize: 11, padding: '4px 10px' }}>
+                                {c.status === 'ACTIVE' ? 'Pauzeer' : 'Hervat'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Geen campagnes gevonden.</div>
+                  )}
+                </div>
+                <div className="panel">
+                  <div className="panel-title">◈ AI Inzichten</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {['Analyseer mijn Meta campagnes', 'Welke campagne moet ik pauzeren?', 'Hoe kan ik mijn CTR verbeteren?', 'Stel een budget optimalisatie voor'].map(q => (
+                      <button key={q} className="pill-btn" onClick={() => { setInput(q); setPage('ai'); }}>{q}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {page === 'seo' && <SEOPage />}
+
+            {page !== 'dashboard' && page !== 'shopify' && page !== 'ai' && page !== 'meta' && page !== 'seo' && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--text-muted)', fontSize: 14, gap: 8 }}>
+                <span style={{ fontSize: 32, opacity: 0.3 }}>{NAV.find(n => n.id === page)?.icon}</span>
+                {NAV.find(n => n.id === page)?.label} — komt binnenkort
+              </div>
+            )}
+
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
