@@ -6,8 +6,20 @@ const client = new Anthropic({
 });
 
 async function getShopifyData() {
-  const base = `https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/api/2024-01`;
-  const headers = { 'X-Shopify-Access-Token': process.env.SHOPIFY_ADMIN_ACCESS_TOKEN! };
+const tokenRes = await fetch(`https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/oauth/access_token`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({
+    grant_type: 'client_credentials',
+    client_id: process.env.SHOPIFY_CLIENT_ID!,
+    client_secret: process.env.SHOPIFY_CLIENT_SECRET!,
+  }),
+});
+const tokenData = await tokenRes.json();
+const token = tokenData.access_token;
+
+const base = `https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/api/2024-01`;
+const headers = { 'X-Shopify-Access-Token': token };
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
