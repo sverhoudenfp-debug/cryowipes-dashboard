@@ -6,20 +6,20 @@ const client = new Anthropic({
 });
 
 async function getShopifyData() {
-const tokenRes = await fetch(`https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/oauth/access_token`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  body: new URLSearchParams({
-    grant_type: 'client_credentials',
-    client_id: process.env.SHOPIFY_CLIENT_ID!,
-    client_secret: process.env.SHOPIFY_CLIENT_SECRET!,
-  }),
-});
-const tokenData = await tokenRes.json();
-const token = tokenData.access_token;
+  const tokenRes = await fetch(`https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/oauth/access_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: process.env.SHOPIFY_CLIENT_ID!,
+      client_secret: process.env.SHOPIFY_CLIENT_SECRET!,
+    }),
+  });
+  const tokenData = await tokenRes.json();
+  const token = tokenData.access_token;
 
-const base = `https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/api/2024-01`;
-const headers = { 'X-Shopify-Access-Token': token };
+  const base = `https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/api/2024-01`;
+  const headers = { 'X-Shopify-Access-Token': token };
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -53,7 +53,6 @@ const headers = { 'X-Shopify-Access-Token': token };
   const prevWeekRevenue = prevWeekOrders.reduce((sum: number, o: any) => sum + parseFloat(o.total_price || '0'), 0);
   const revenueGrowth = prevWeekRevenue > 0 ? (((lastWeekRevenue - prevWeekRevenue) / prevWeekRevenue) * 100).toFixed(1) : 'N/A';
 
-  // Top producten deze week
   const productSales: Record<string, { title: string; count: number; revenue: number }> = {};
   lastWeekOrders.forEach((o: any) => {
     o.line_items?.forEach((item: any) => {
@@ -101,7 +100,6 @@ export async function POST(request: NextRequest) {
     const { orders, products, customers, todayOrders, todayRevenue, totalRevenue, aov, lastWeekOrders, lastWeekRevenue, prevWeekRevenue, revenueGrowth, topProducts } = shopify;
     const { meta, campaigns, purchases, roas, ctrChange } = metaResult;
 
-    // Automatische signalen genereren
     const signals: string[] = [];
     if (parseFloat(meta.ctr || '0') < 1) signals.push('⚠️ CTR onder 1% — advertentietekst of targeting waarschijnlijk niet optimaal');
     if (parseFloat(meta.cpc || '0') > 2) signals.push('⚠️ CPC boven $2 — overweeg targeting te verfijnen of budget te herverdelen');
@@ -196,6 +194,7 @@ GEDRAGSREGELS:
 5. Als een campagne slecht presteert (CTR < 1% of ROAS < 2), stel direct een actie voor
 6. Vergelijk altijd met vorige periode om trends te identificeren
 7. Antwoord in het Nederlands, maar advertentieteksten in het Engels (voor USA/Canada)
+8. Gebruik GEEN markdown tabellen in je antwoorden — gebruik gewone tekst met regels
 
 Als je een actie wil voorstellen, sluit je antwoord af met:
 ACTION_JSON:{"type":"ACTIE_TYPE","description":"Duidelijke uitleg","payload":{...}}`;
