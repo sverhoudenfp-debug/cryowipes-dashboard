@@ -201,12 +201,12 @@ ACTION_JSON:{"type":"ACTIE_TYPE","description":"Duidelijke uitleg","payload":{..
       .join('');
 
     let action = null;
-    const actionMatch = text.match(/ACTION_JSON:({.*})/s);
+    const actionMatch = text.match(/ACTION_JSON:(\{[\s\S]*\})/);
     if (actionMatch) {
       try { action = JSON.parse(actionMatch[1]); } catch {}
     }
 
-    const cleanText = text.replace(/ACTION_JSON:{.*}/s, '').trim();
+    const cleanText = text.replace(/ACTION_JSON:\{[\s\S]*\}/, '').trim();
 
     return NextResponse.json({ content: cleanText, action });
   } catch (error: any) {
