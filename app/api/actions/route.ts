@@ -156,13 +156,14 @@ export async function POST(request: NextRequest) {
       const campaignRes = await fetch(`https://graph.facebook.com/v20.0/${AD_ACCOUNT_ID}/campaigns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: campaign_name,
-          objective,
-          status: 'PAUSED',
-          special_ad_categories: [],
-          access_token: metaToken,
-        }),
+body: JSON.stringify({
+  name: campaign_name,
+  objective,
+  status: 'PAUSED',
+  special_ad_categories: [],
+  is_adset_budget_sharing_enabled: false,
+  access_token: metaToken,
+}),
       });
       const campaignData = await campaignRes.json();
       if (campaignData.error) {
