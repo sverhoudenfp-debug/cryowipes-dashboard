@@ -24,7 +24,7 @@ async function sendEmail(subject: string, html: string) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'CryoWipes Dashboard <onboarding@resend.dev>',
+      from: 'CryoWipes Dashboard <dashboard@cryowipes.store>',
       to: NOTIFY_EMAIL,
       subject,
       html,
