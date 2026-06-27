@@ -702,12 +702,13 @@ const metaCurrency = metaData?.currency || 'USD';
             {/* ── Meta Ads ── */}
             {page === 'meta' && (
               <div style={{ animation: 'fadeUp 0.3s ease' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 12, marginBottom: 20 }}>
                   <KpiCard label="Spend" value={`$${metaSpend}`} sub="Laatste 7 dagen" color="var(--amber)" />
                   <KpiCard label="Impressies" value={Number(metaImpressions).toLocaleString()} sub="Laatste 7 dagen" color="var(--purple)" />
                   <KpiCard label="Clicks" value={metaClicks} sub="Laatste 7 dagen" color="var(--cyan)" />
                   <KpiCard label="CTR" value={metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%'} sub="Click-through rate" color="var(--green)" />
                   <KpiCard label="CPC" value={metaData?.cpc ? `$${parseFloat(metaData.cpc).toFixed(2)}` : '$0'} sub="Kosten per klik" color="var(--amber)" />
+                  <KpiCard label="Account saldo" value={`$${metaBalance}`} sub={`${metaCurrency} · Prepaid tegoed`} color="var(--green)" />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
                   <div className="panel">
