@@ -62,10 +62,8 @@ export async function GET() {
     const purchases = meta.actions?.find((a: any) => a.action_type === 'purchase')?.value || '0';
     const roas = meta.spend && parseFloat(meta.spend) > 0 ? parseFloat(purchases) / parseFloat(meta.spend) : 0;
 
-    // ── Signalen genereren ──
     const notifications: { type: string; severity: 'critical' | 'warning' | 'info'; title: string; message: string; sendEmail: boolean }[] = [];
 
-    // Meta saldo laag
     if (balance < 20 && balance >= 0) {
       notifications.push({
         type: 'meta_balance',
@@ -76,7 +74,6 @@ export async function GET() {
       });
     }
 
-    // Geen orders vandaag (alleen na 14:00)
     if (todayOrders.length === 0 && new Date().getHours() >= 14) {
       notifications.push({
         type: 'no_orders',
@@ -87,7 +84,6 @@ export async function GET() {
       });
     }
 
-    // Lage voorraad
     const lowStockProducts = products.filter((p: any) => {
       const stock = p.variants?.reduce((s: number, v: any) => s + (v.inventory_quantity || 0), 0) || 0;
       return stock < 5 && stock >= 0;
@@ -105,7 +101,6 @@ export async function GET() {
       });
     }
 
-    // Slechte ROAS
     if (roas > 0 && roas < 2 && parseFloat(meta.spend || '0') > 5) {
       notifications.push({
         type: 'low_roas',
@@ -116,7 +111,6 @@ export async function GET() {
       });
     }
 
-    // Hoge CPC
     if (parseFloat(meta.cpc || '0') > 3) {
       notifications.push({
         type: 'high_cpc',
@@ -127,7 +121,6 @@ export async function GET() {
       });
     }
 
-    // Goede performance melding
     if (roas > 3) {
       notifications.push({
         type: 'good_roas',
@@ -163,12 +156,34 @@ export async function GET() {
           </div>
         </div>
       `;
-
       await sendEmail(
         `🚨 CryoWipes Alert — ${emailNotifications.map(n => n.title).join(', ')}`,
         emailHtml
       );
     }
+
+    // ── TEST EMAIL — verwijder dit als het werkt ──
+    await sendEmail(
+      '🧪 Test melding CryoWipes Dashboard',
+      `<div style="font-family: Inter, sans-serif; background: #060810; color: #e8eaf0; padding: 32px; border-radius: 16px; max-width: 600px; margin: 0 auto;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+          <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #4f8ef7, #00d4ff); border-radius: 10px; text-align: center; line-height: 40px; font-size: 20px;">❄</div>
+          <div>
+            <div style="font-size: 18px; font-weight: 700;">CryoWipes Dashboard</div>
+            <div style="font-size: 12px; color: #5a6280;">Test melding</div>
+          </div>
+        </div>
+        <div style="background: #111525; border: 1px solid #00e5a040; border-radius: 12px; padding: 20px;">
+          <div style="font-size: 15px; font-weight: 600; color: #00e5a0; margin-bottom: 8px;">✅ Email notificaties werken!</div>
+          <div style="font-size: 13px; color: #8892b0; line-height: 1.6;">Je CryoWipes dashboard kan je nu automatisch mailen bij alerts zoals lage voorraad, laag Meta saldo of slechte ROAS.</div>
+        </div>
+        <div style="margin-top: 24px; text-align: center;">
+          <a href="https://cryowipes-ads-dashboard.vercel.app" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #4f8ef7, #00d4ff); color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
+            Open Dashboard →
+          </a>
+        </div>
+      </div>`
+    );
 
     return NextResponse.json({
       notifications,
