@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const NOTIFY_EMAIL = 's.verhoudenfp@gmail.com';
+const NOTIFY_EMAIL = 'silvijnverhouden552@gmail.com';
 
 async function getShopifyToken() {
   const res = await fetch(`https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/oauth/access_token`, {
