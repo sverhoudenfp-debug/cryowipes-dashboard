@@ -2,21 +2,8 @@ import { NextResponse } from 'next/server';
 
 const NOTIFY_EMAIL = 'silvijnverhouden552@gmail.com';
 
-// Bijhoudt welke alerts vandaag al een email hebben gestuurd
-// Reset automatisch de volgende dag
-const emailSentToday: Record<string, string> = {};
-
-// Bijhoudt welke orders al gemeld zijn
+// Bijhoudt welke orders al gemeld zijn (per server instantie)
 const notifiedOrderIds = new Set<string>();
-
-function alreadySentToday(type: string): boolean {
-  const today = new Date().toDateString();
-  return emailSentToday[type] === today;
-}
-
-function markSentToday(type: string) {
-  emailSentToday[type] = new Date().toDateString();
-}
 
 async function getShopifyToken() {
   const res = await fetch(`https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/oauth/access_token`, {
@@ -84,7 +71,7 @@ export async function GET() {
     const notifications: { type: string; severity: 'critical' | 'warning' | 'info'; title: string; message: string; sendEmail: boolean }[] = [];
     let emailsSent = 0;
 
-    // ── Nieuwe order melding — altijd email per nieuwe order ──
+    // ── Nieuwe order — WEL email, elke nieuwe order ──
     for (const order of newOrders) {
       const customerName = order.shipping_address
         ? `${order.shipping_address.first_name || ''} ${order.shipping_address.last_name || ''}`.trim()
@@ -129,12 +116,8 @@ export async function GET() {
             </div>
           </div>
           <div style="text-align: center;">
-            <a href="https://cryowipes-ads-dashboard.vercel.app" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #4f8ef7, #00d4ff); color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin-right: 8px;">
-              Open Dashboard →
-            </a>
-            <a href="https://admin.shopify.com/store/cryowipes/orders/${order.id}" style="display: inline-block; padding: 12px 24px; background: #111525; border: 1px solid #1e2540; color: #e8eaf0; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
-              Bekijk order →
-            </a>
+            <a href="https://cryowipes-ads-dashboard.vercel.app" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #4f8ef7, #00d4ff); color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin-right: 8px;">Open Dashboard →</a>
+            <a href="https://admin.shopify.com/store/cryowipes/orders/${order.id}" style="display: inline-block; padding: 12px 24px; background: #111525; border: 1px solid #1e2540; color: #e8eaf0; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Bekijk order →</a>
           </div>
         </div>`
       );
@@ -143,35 +126,18 @@ export async function GET() {
       emailsSent++;
     }
 
-    // ── Meta saldo laag — max 1x per dag email ──
+    // ── Alle onderstaande alerts — ALLEEN in dashboard bel, GEEN email ──
+
     if (balance < 20 && balance >= 0) {
-      const shouldEmail = balance < 10 && !alreadySentToday('meta_balance');
       notifications.push({
         type: 'meta_balance',
         severity: balance < 5 ? 'critical' : 'warning',
         title: balance < 5 ? '🚨 Meta saldo kritiek laag' : '⚠️ Meta saldo bijna op',
-        message: `Je Meta Ads saldo is ${currency} $${balance.toFixed(2)}. ${balance < 5 ? 'Laad direct bij om onderbrekingen te voorkomen!' : 'Overweeg bij te laden.'}`,
-        sendEmail: shouldEmail,
+        message: `Je Meta Ads saldo is ${currency} $${balance.toFixed(2)}. ${balance < 5 ? 'Laad direct bij!' : 'Overweeg bij te laden.'}`,
+        sendEmail: false,
       });
-      if (shouldEmail) {
-        await sendEmail(
-          `🚨 Meta saldo laag — $${balance.toFixed(2)}`,
-          `<div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; background: #060810; color: #e8eaf0; padding: 32px; border-radius: 16px;">
-            <div style="background: #111525; border: 1px solid #ff5c5c40; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-              <div style="font-size: 15px; font-weight: 600; color: #ff5c5c; margin-bottom: 6px;">${balance < 5 ? '🚨 Meta saldo kritiek laag' : '⚠️ Meta saldo bijna op'}</div>
-              <div style="font-size: 13px; color: #8892b0;">Je Meta Ads saldo is ${currency} $${balance.toFixed(2)}. Laad bij om je campagnes actief te houden.</div>
-            </div>
-            <div style="text-align: center;">
-              <a href="https://cryowipes-ads-dashboard.vercel.app" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #4f8ef7, #00d4ff); color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Open Dashboard →</a>
-            </div>
-          </div>`
-        );
-        markSentToday('meta_balance');
-        emailsSent++;
-      }
     }
 
-    // ── Geen orders vandaag — alleen in dashboard, geen email ──
     if (todayOrders.length === 0 && new Date().getHours() >= 14) {
       notifications.push({
         type: 'no_orders',
@@ -182,79 +148,49 @@ export async function GET() {
       });
     }
 
-    // ── Lage voorraad — max 1x per dag email ──
     const lowStockProducts = products.filter((p: any) => {
       const stock = p.variants?.reduce((s: number, v: any) => s + (v.inventory_quantity || 0), 0) || 0;
       return stock < 5 && stock >= 0;
     });
     if (lowStockProducts.length > 0) {
-      const hasOutOfStock = lowStockProducts.some((p: any) => p.variants?.reduce((s: number, v: any) => s + (v.inventory_quantity || 0), 0) === 0);
-      const shouldEmail = hasOutOfStock && !alreadySentToday('low_stock');
       notifications.push({
         type: 'low_stock',
-        severity: hasOutOfStock ? 'critical' : 'warning',
+        severity: lowStockProducts.some((p: any) => p.variants?.reduce((s: number, v: any) => s + (v.inventory_quantity || 0), 0) === 0) ? 'critical' : 'warning',
         title: '📦 Lage voorraad',
-        message: `De volgende producten hebben lage voorraad: ${lowStockProducts.map((p: any) => {
+        message: `Lage voorraad: ${lowStockProducts.map((p: any) => {
           const stock = p.variants?.reduce((s: number, v: any) => s + (v.inventory_quantity || 0), 0) || 0;
           return `${p.title} (${stock} stuks)`;
         }).join(', ')}`,
-        sendEmail: shouldEmail,
+        sendEmail: false,
       });
-      if (shouldEmail) {
-        await sendEmail(
-          `📦 Lage voorraad — actie vereist`,
-          `<div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; background: #060810; color: #e8eaf0; padding: 32px; border-radius: 16px;">
-            <div style="background: #111525; border: 1px solid #ff5c5c40; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-              <div style="font-size: 15px; font-weight: 600; color: #ff5c5c; margin-bottom: 6px;">📦 Lage voorraad</div>
-              <div style="font-size: 13px; color: #8892b0;">${lowStockProducts.map((p: any) => {
-                const stock = p.variants?.reduce((s: number, v: any) => s + (v.inventory_quantity || 0), 0) || 0;
-                return `${p.title}: ${stock} stuks`;
-              }).join('<br/>')}</div>
-            </div>
-            <div style="text-align: center;">
-              <a href="https://admin.shopify.com/store/cryowipes/products" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #4f8ef7, #00d4ff); color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Bekijk producten →</a>
-            </div>
-          </div>`
-        );
-        markSentToday('low_stock');
-        emailsSent++;
-      }
     }
 
-    // ── Slechte ROAS — max 1x per dag email ──
     if (roas > 0 && roas < 2 && parseFloat(meta.spend || '0') > 5) {
-      const shouldEmail = roas < 1 && !alreadySentToday('low_roas');
       notifications.push({
         type: 'low_roas',
         severity: 'warning',
         title: '📉 Lage ROAS',
-        message: `Je ROAS is ${roas.toFixed(2)}x — onder de 2x breakeven. Overweeg campagnes te pauzeren of aan te passen.`,
-        sendEmail: shouldEmail,
+        message: `Je ROAS is ${roas.toFixed(2)}x — onder de 2x breakeven.`,
+        sendEmail: false,
       });
-      if (shouldEmail) {
-        markSentToday('low_roas');
-        emailsSent++;
-      }
     }
 
-    // ── Hoge CPC — alleen dashboard ──
     if (parseFloat(meta.cpc || '0') > 3) {
       notifications.push({
         type: 'high_cpc',
         severity: 'warning',
         title: '💸 Hoge CPC',
-        message: `Je CPC is $${parseFloat(meta.cpc).toFixed(2)} — boven $3. Overweeg je targeting of advertentietekst aan te passen.`,
+        message: `Je CPC is $${parseFloat(meta.cpc).toFixed(2)} — boven $3.`,
         sendEmail: false,
       });
     }
 
-    // ── Goede ROAS — alleen dashboard ──
     if (roas > 3) {
       notifications.push({
         type: 'good_roas',
         severity: 'info',
         title: '✅ Goede ROAS',
-        message: `Je ROAS is ${roas.toFixed(2)}x — overweeg je budget te verhogen voor meer sales!`,
+        message: `Je ROAS is ${roas.toFixed(2)}x — overweeg je budget te verhogen!`,
         sendEmail: false,
       });
     }
