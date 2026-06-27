@@ -412,10 +412,11 @@ export default function Dashboard() {
 const [showNotifications, setShowNotifications] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+useEffect(() => {
     const load = () => {
       fetch('/api/shopify').then(r => r.json()).then(setShopifyData).catch(() => {});
       fetch('/api/meta').then(r => r.json()).then(setMetaData).catch(() => {});
+      fetch('/api/notifications').then(r => r.json()).then(d => setNotifications(d.notifications || [])).catch(() => {});
     };
     load();
     const interval = setInterval(load, 30000);
