@@ -495,8 +495,8 @@ export default function Dashboard() {
   const metaSpend = metaData?.spend || '0';
   const metaImpressions = metaData?.impressions || '0';
   const metaClicks = metaData?.clicks || '0';
-  const metaBalance = metaData?.balance || '0';
-  const metaCurrency = metaData?.currency || 'USD';
+  const metaAmountSpent = metaData?.amount_spent || '0.00';
+const metaCurrency = metaData?.currency || 'USD';
   const pendingCount = pendingActions.filter(a => a.status === 'pending').length;
   const alertCount = notifications.filter(n => n.severity !== 'info').length;
 
