@@ -8,7 +8,7 @@ export async function GET() {
     const [insightsRes, campaignsRes, accountRes] = await Promise.all([
       fetch(`https://graph.facebook.com/v20.0/${accountId}/insights?fields=spend,impressions,clicks,ctr,cpc&date_preset=last_7d&access_token=${token}`),
       fetch(`https://graph.facebook.com/v20.0/${accountId}/campaigns?fields=id,name,status,daily_budget,lifetime_budget&access_token=${token}`),
-      fetch(`https://graph.facebook.com/v20.0/${accountId}?fields=balance,currency,amount_spent,funding_source_details&access_token=${token}`),
+      fetch(`https://graph.facebook.com/v20.0/${accountId}?fields=currency,amount_spent&access_token=${token}`),
     ]);
 
     const [insightsData, campaignsData, accountData] = await Promise.all([
@@ -19,15 +19,9 @@ export async function GET() {
 
     const insights = insightsData.data?.[0] || {};
     const currency = accountData.currency || 'USD';
-
-    // Probeer prepaid saldo op te halen via funding_source_details
-    // Als dat niet werkt, val terug op balance veld
-    let balance = '0.00';
-    if (accountData.funding_source_details?.amount) {
-      balance = (accountData.funding_source_details.amount / 100).toFixed(2);
-    } else if (accountData.balance && parseInt(accountData.balance) > 0) {
-      balance = (parseInt(accountData.balance) / 100).toFixed(2);
-    }
+    const amountSpent = accountData.amount_spent
+      ? (parseInt(accountData.amount_spent) / 100).toFixed(2)
+      : '0.00';
 
     return NextResponse.json({
       spend: insights.spend || '0',
@@ -36,7 +30,7 @@ export async function GET() {
       ctr: insights.ctr || '0',
       cpc: insights.cpc || '0',
       campaigns: campaignsData.data || [],
-      balance,
+      amount_spent: amountSpent,
       currency,
     });
   } catch (e: any) {
