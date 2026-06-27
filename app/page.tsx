@@ -785,7 +785,7 @@ export default function Dashboard() {
                   <KpiCard label="Clicks" value={metaClicks} sub="Laatste 7 dagen" color="var(--cyan)" />
                   <KpiCard label="CTR" value={metaData?.ctr ? `${parseFloat(metaData.ctr).toFixed(2)}%` : '0%'} sub="Click-through rate" color="var(--green)" />
                   <KpiCard label="CPC" value={metaData?.cpc ? `$${parseFloat(metaData.cpc).toFixed(2)}` : '$0'} sub="Kosten per klik" color="var(--amber)" />
-                  <KpiCard label="Account saldo" value={`$${metaBalance}`} sub={`${metaCurrency} · Prepaid tegoed`} color="var(--green)" />
+                  <KpiCard label="Besteed (all time)" value={`$${metaData?.amount_spent ? (parseInt(metaData.amount_spent) / 100).toFixed(2) : '0.00'}`} sub="Totaal uitgegeven" color="var(--amber)" />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
                   <div className="panel">
