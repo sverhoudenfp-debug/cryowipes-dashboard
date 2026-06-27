@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
     const { action, payload } = await request.json();
     const metaToken = process.env.META_ACCESS_TOKEN;
 
-    // ── SHOPIFY ACTIES ─────────────────────────────────────────
-    if (['update_product_title', 'update_product_price', 'update_inventory'].includes(action)) {
+    // ── SHOPIFY BASIS ACTIES ───────────────────────────────────
+    if (['update_product_title', 'update_product_price', 'update_inventory', 'update_product_description'].includes(action)) {
       const token = await getShopifyToken();
       const base = `https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/api/2024-01`;
       const headers = { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' };
@@ -47,6 +47,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, result: data.variant?.price });
       }
 
+      if (action === 'update_product_description') {
+        const res = await fetch(`${base}/products/${payload.product_id}.json`, {
+          method: 'PUT', headers,
+          body: JSON.stringify({ product: { id: payload.product_id, body_html: payload.value } }),
+        });
+        const data = await res.json();
+        return NextResponse.json({ success: true, result: !!data.product });
+      }
+
       if (action === 'update_inventory') {
         const locRes = await fetch(`${base}/locations.json`, { headers });
         const locData = await locRes.json();
@@ -58,6 +67,86 @@ export async function POST(request: NextRequest) {
             inventory_item_id: payload.inventory_item_id,
             available: payload.new_quantity,
           }),
+        });
+        return NextResponse.json({ success: true, result: await res.json() });
+      }
+    }
+
+    // ── SEO ACTIES ─────────────────────────────────────────────
+    if (['update_seo_title', 'update_seo_description', 'update_image_alt', 'update_collection_description'].includes(action)) {
+      const token = await getShopifyToken();
+      const base = `https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/api/2024-01`;
+      const headers = { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' };
+
+      // SEO title via metafield
+      if (action === 'update_seo_title') {
+        // Eerst bestaande metafield ophalen
+        const mfRes = await fetch(`${base}/products/${payload.product_id}/metafields.json`, { headers });
+        const mfData = await mfRes.json();
+        const existing = (mfData.metafields || []).find((m: any) => m.namespace === 'global' && m.key === 'title_tag');
+
+        if (existing) {
+          // Update bestaande metafield
+          const res = await fetch(`${base}/metafields/${existing.id}.json`, {
+            method: 'PUT', headers,
+            body: JSON.stringify({ metafield: { id: existing.id, value: payload.value, type: 'single_line_text_field' } }),
+          });
+          return NextResponse.json({ success: true, result: await res.json() });
+        } else {
+          // Nieuwe metafield aanmaken
+          const res = await fetch(`${base}/products/${payload.product_id}/metafields.json`, {
+            method: 'POST', headers,
+            body: JSON.stringify({
+              metafield: {
+                namespace: 'global', key: 'title_tag',
+                value: payload.value, type: 'single_line_text_field',
+              },
+            }),
+          });
+          return NextResponse.json({ success: true, result: await res.json() });
+        }
+      }
+
+      // SEO description via metafield
+      if (action === 'update_seo_description') {
+        const mfRes = await fetch(`${base}/products/${payload.product_id}/metafields.json`, { headers });
+        const mfData = await mfRes.json();
+        const existing = (mfData.metafields || []).find((m: any) => m.namespace === 'global' && m.key === 'description_tag');
+
+        if (existing) {
+          const res = await fetch(`${base}/metafields/${existing.id}.json`, {
+            method: 'PUT', headers,
+            body: JSON.stringify({ metafield: { id: existing.id, value: payload.value, type: 'single_line_text_field' } }),
+          });
+          return NextResponse.json({ success: true, result: await res.json() });
+        } else {
+          const res = await fetch(`${base}/products/${payload.product_id}/metafields.json`, {
+            method: 'POST', headers,
+            body: JSON.stringify({
+              metafield: {
+                namespace: 'global', key: 'description_tag',
+                value: payload.value, type: 'single_line_text_field',
+              },
+            }),
+          });
+          return NextResponse.json({ success: true, result: await res.json() });
+        }
+      }
+
+      // ALT tekst van afbeelding updaten
+      if (action === 'update_image_alt') {
+        const res = await fetch(`${base}/products/${payload.product_id}/images/${payload.image_id}.json`, {
+          method: 'PUT', headers,
+          body: JSON.stringify({ image: { id: payload.image_id, alt: payload.value } }),
+        });
+        return NextResponse.json({ success: true, result: await res.json() });
+      }
+
+      // Collectiebeschrijving updaten
+      if (action === 'update_collection_description') {
+        const res = await fetch(`${base}/custom_collections/${payload.collection_id}.json`, {
+          method: 'PUT', headers,
+          body: JSON.stringify({ custom_collection: { id: payload.collection_id, body_html: payload.value } }),
         });
         return NextResponse.json({ success: true, result: await res.json() });
       }
@@ -97,7 +186,7 @@ export async function POST(request: NextRequest) {
         campaign_name,
         objective = 'OUTCOME_SALES',
         daily_budget = 1000,
-        targeting_countries = ['NL'],
+        targeting_countries = ['US', 'CA'],
         age_min = 18,
         age_max = 45,
         ad_headline,
@@ -106,64 +195,46 @@ export async function POST(request: NextRequest) {
         image_url,
       } = payload;
 
-      // Stap 1: Campagne aanmaken
       const campaignRes = await fetch(`https://graph.facebook.com/v20.0/${AD_ACCOUNT_ID}/campaigns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: campaign_name,
-          objective,
-          status: 'PAUSED',
-          special_ad_categories: [],
-          access_token: metaToken,
+          name: campaign_name, objective, status: 'PAUSED',
+          special_ad_categories: [], access_token: metaToken,
         }),
       });
       const campaignData = await campaignRes.json();
       if (campaignData.error) return NextResponse.json({ success: false, error: campaignData.error.message });
       const campaign_id = campaignData.id;
 
-      // Stap 2: Ad set aanmaken
       const adSetRes = await fetch(`https://graph.facebook.com/v20.0/${AD_ACCOUNT_ID}/adsets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: `${campaign_name} - Ad Set`,
-          campaign_id,
-          daily_budget: daily_budget * 100,
-          billing_event: 'IMPRESSIONS',
+          name: `${campaign_name} - Ad Set`, campaign_id,
+          daily_budget: daily_budget * 100, billing_event: 'IMPRESSIONS',
           optimization_goal: 'OFFSITE_CONVERSIONS',
-          targeting: {
-            geo_locations: { countries: targeting_countries },
-            age_min,
-            age_max,
-          },
-          status: 'PAUSED',
-          access_token: metaToken,
+          targeting: { geo_locations: { countries: targeting_countries }, age_min, age_max },
+          status: 'PAUSED', access_token: metaToken,
         }),
       });
       const adSetData = await adSetRes.json();
       if (adSetData.error) return NextResponse.json({ success: false, error: adSetData.error.message });
       const adset_id = adSetData.id;
 
-      // Stap 3: Creative aanmaken
       const creativeBody: any = {
         name: `${campaign_name} - Creative`,
-object_story_spec: {
-  page_id: PAGE_ID,
-  instagram_actor_id: INSTAGRAM_ACTOR_ID,
-  link_data: {
-            message: ad_body,
-            link: ad_url,
-            name: ad_headline,
+        object_story_spec: {
+          page_id: PAGE_ID,
+          instagram_actor_id: INSTAGRAM_ACTOR_ID,
+          link_data: {
+            message: ad_body, link: ad_url, name: ad_headline,
             call_to_action: { type: 'SHOP_NOW', value: { link: ad_url } },
           },
         },
         access_token: metaToken,
       };
-
-      if (image_url) {
-        creativeBody.object_story_spec.link_data.picture = image_url;
-      }
+      if (image_url) creativeBody.object_story_spec.link_data.picture = image_url;
 
       const creativeRes = await fetch(`https://graph.facebook.com/v20.0/${AD_ACCOUNT_ID}/adcreatives`, {
         method: 'POST',
@@ -172,18 +243,14 @@ object_story_spec: {
       });
       const creativeData = await creativeRes.json();
       if (creativeData.error) return NextResponse.json({ success: false, error: creativeData.error.message });
-      const creative_id = creativeData.id;
 
-      // Stap 4: Ad aanmaken
       const adRes = await fetch(`https://graph.facebook.com/v20.0/${AD_ACCOUNT_ID}/ads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: `${campaign_name} - Ad`,
-          adset_id,
-          creative: { creative_id },
-          status: 'PAUSED',
-          access_token: metaToken,
+          name: `${campaign_name} - Ad`, adset_id,
+          creative: { creative_id: creativeData.id },
+          status: 'PAUSED', access_token: metaToken,
         }),
       });
       const adData = await adRes.json();
@@ -192,11 +259,8 @@ object_story_spec: {
       return NextResponse.json({
         success: true,
         result: {
-          campaign_id,
-          adset_id,
-          creative_id,
-          ad_id: adData.id,
-          message: `Campagne "${campaign_name}" aangemaakt! Staat op PAUSED — je kan hem activeren in Meta Ads Manager.`,
+          campaign_id, adset_id, creative_id: creativeData.id, ad_id: adData.id,
+          message: `Campagne "${campaign_name}" aangemaakt op PAUSED — activeer in Meta Ads Manager.`,
         },
       });
     }
