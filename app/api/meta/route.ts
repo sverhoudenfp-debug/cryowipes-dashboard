@@ -5,17 +5,24 @@ export async function GET() {
     const token = process.env.META_ACCESS_TOKEN;
     const accountId = 'act_1315459333262567';
 
-    const [insightsRes, campaignsRes] = await Promise.all([
+    const [insightsRes, campaignsRes, accountRes] = await Promise.all([
       fetch(`https://graph.facebook.com/v20.0/${accountId}/insights?fields=spend,impressions,clicks,ctr,cpc&date_preset=last_7d&access_token=${token}`),
       fetch(`https://graph.facebook.com/v20.0/${accountId}/campaigns?fields=id,name,status,daily_budget,lifetime_budget&access_token=${token}`),
+      fetch(`https://graph.facebook.com/v20.0/${accountId}?fields=balance,currency,amount_spent&access_token=${token}`),
     ]);
 
-    const [insightsData, campaignsData] = await Promise.all([
+    const [insightsData, campaignsData, accountData] = await Promise.all([
       insightsRes.json(),
       campaignsRes.json(),
+      accountRes.json(),
     ]);
 
     const insights = insightsData.data?.[0] || {};
+
+    // Balance komt in centen terug, delen door 100
+    const balanceCents = parseInt(accountData.balance || '0');
+    const balance = (balanceCents / 100).toFixed(2);
+    const currency = accountData.currency || 'USD';
 
     return NextResponse.json({
       spend: insights.spend || '0',
@@ -24,6 +31,8 @@ export async function GET() {
       ctr: insights.ctr || '0',
       cpc: insights.cpc || '0',
       campaigns: campaignsData.data || [],
+      balance,
+      currency,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
