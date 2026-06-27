@@ -104,7 +104,6 @@ const css = `
   }
   .panel-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 18px; }
 
-  /* Chat */
   .chat-wrap { display: flex; flex-direction: column; height: 100%; }
   .chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
   .chat-messages::-webkit-scrollbar { width: 4px; }
@@ -161,7 +160,6 @@ const css = `
   .chat-send:active { transform: scale(0.97); }
   .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* Action card */
   .action-card {
     background: var(--bg-panel);
     border: 1px solid var(--amber-dim);
@@ -171,7 +169,6 @@ const css = `
     animation: fadeUp 0.3s ease;
   }
 
-  /* Badge */
   .badge {
     display: inline-flex; align-items: center; justify-content: center;
     padding: 2px 8px; border-radius: 6px;
@@ -183,19 +180,16 @@ const css = `
   .badge-blue { background: var(--purple-dim); color: var(--purple); }
   .badge-cyan { background: var(--cyan-dim); color: var(--cyan); }
 
-  /* Dot indicator */
   .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
   .dot-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
   .dot-cyan { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
 
-  /* Table */
   .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .data-table th { padding: 8px 0; color: var(--text-muted); font-weight: 500; text-align: left; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
   .data-table td { padding: 11px 0; border-bottom: 1px solid var(--border); color: var(--text-dim); }
   .data-table tr:last-child td { border-bottom: none; }
 
-  /* Pill btn */
   .pill-btn {
     padding: 7px 14px; background: var(--bg-panel);
     border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -204,7 +198,34 @@ const css = `
   }
   .pill-btn:hover { border-color: var(--border-bright); color: var(--text-dim); background: var(--bg-hover); }
 
-  /* Scrollbar global */
+  .notif-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 16px;
+    position: relative;
+    transition: border-color 0.2s;
+    line-height: 1;
+  }
+  .notif-btn:hover { border-color: var(--border-bright); }
+  .notif-btn.has-alerts { border-color: var(--red); }
+
+  .notif-dropdown {
+    position: absolute;
+    top: 48px; right: 0;
+    width: 340px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    z-index: 100;
+    box-shadow: 0 8px 32px #00000080;
+    animation: fadeUp 0.2s ease;
+  }
+
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
@@ -221,14 +242,9 @@ const css = `
     0%, 100% { opacity: 1; }
     50% { opacity: 0.4; }
   }
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
   .pulse { animation: pulse 2s ease-in-out infinite; }
 `;
 
-// ─── Nav ───────────────────────────────────────────────────────────────────────
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: '⬡' },
   { id: 'shopify', label: 'Shopify', icon: '🛍' },
@@ -243,7 +259,6 @@ const revenueData = [
   { dag: 'Do', omzet: 120 }, { dag: 'Vr', omzet: 95 }, { dag: 'Za', omzet: 148 }, { dag: 'Zo', omzet: 110 },
 ];
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
 function renderMessage(text: string) {
   return text
     .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text)">$1</strong>')
@@ -255,7 +270,6 @@ function renderMessage(text: string) {
     .replace(/\n\n/g, '<br/><br/>').replace(/\n/g, '<br/>');
 }
 
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
 function KpiCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color: string }) {
   return (
     <div className="kpi-card">
@@ -266,7 +280,6 @@ function KpiCard({ label, value, sub, color }: { label: string; value: string; s
   );
 }
 
-// ─── Action Card ──────────────────────────────────────────────────────────────
 interface AIAction { id: string; description: string; action: string; payload: any; status: 'pending' | 'approved' | 'rejected' | 'executed'; }
 
 function ActionCard({ action, onApprove, onReject }: { action: AIAction; onApprove: () => void; onReject: () => void }) {
@@ -280,7 +293,7 @@ function ActionCard({ action, onApprove, onReject }: { action: AIAction; onAppro
         dangerouslySetInnerHTML={{ __html: renderMessage(action.description) }} />
       {action.status === 'pending' && (
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={onApprove} style={{ padding: '8px 16px', background: 'var(--green-dim)', color: 'var(--green)', border: '1px solid var(--green)40', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font)', transition: 'opacity 0.15s' }}>
+          <button onClick={onApprove} style={{ padding: '8px 16px', background: 'var(--green-dim)', color: 'var(--green)', border: '1px solid var(--green)40', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font)' }}>
             Goedkeuren
           </button>
           <button onClick={onReject} style={{ padding: '8px 16px', background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid var(--red)40', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font)' }}>
@@ -294,7 +307,6 @@ function ActionCard({ action, onApprove, onReject }: { action: AIAction; onAppro
   );
 }
 
-// ─── Chat Component ───────────────────────────────────────────────────────────
 function ChatBox({ messages, input, setInput, send, loading, chatRef, compact = false }: any) {
   return (
     <div className="chat-wrap">
@@ -321,7 +333,6 @@ function ChatBox({ messages, input, setInput, send, loading, chatRef, compact = 
   );
 }
 
-// ─── SEO Page ─────────────────────────────────────────────────────────────────
 function SEOPage() {
   const [seoData, setSeoData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -397,7 +408,6 @@ function SEOPage() {
   );
 }
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [page, setPage] = useState('dashboard');
   const [messages, setMessages] = useState([
@@ -409,10 +419,11 @@ export default function Dashboard() {
   const [metaData, setMetaData] = useState<any>(null);
   const [pendingActions, setPendingActions] = useState<AIAction[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
-const [showNotifications, setShowNotifications] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
-useEffect(() => {
+  useEffect(() => {
     const load = () => {
       fetch('/api/shopify').then(r => r.json()).then(setShopifyData).catch(() => {});
       fetch('/api/meta').then(r => r.json()).then(setMetaData).catch(() => {});
@@ -421,6 +432,17 @@ useEffect(() => {
     load();
     const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Sluit notificaties als je buiten klikt
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
   useEffect(() => {
@@ -474,8 +496,9 @@ useEffect(() => {
   const metaImpressions = metaData?.impressions || '0';
   const metaClicks = metaData?.clicks || '0';
   const metaBalance = metaData?.balance || '0';
-const metaCurrency = metaData?.currency || 'USD';
+  const metaCurrency = metaData?.currency || 'USD';
   const pendingCount = pendingActions.filter(a => a.status === 'pending').length;
+  const alertCount = notifications.filter(n => n.severity !== 'info').length;
 
   return (
     <>
@@ -484,7 +507,6 @@ const metaCurrency = metaData?.currency || 'USD';
 
         {/* ── Sidebar ── */}
         <div className="sidebar">
-          {/* Logo */}
           <div style={{ padding: '24px 20px 22px', borderBottom: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 34, height: 34, background: 'var(--gradient)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>❄</div>
@@ -494,8 +516,6 @@ const metaCurrency = metaData?.currency || 'USD';
               </div>
             </div>
           </div>
-
-          {/* Nav */}
           <nav style={{ padding: '14px 12px', flex: 1 }}>
             {NAV.map(n => (
               <button key={n.id} className={`nav-btn ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)}>
@@ -509,8 +529,6 @@ const metaCurrency = metaData?.currency || 'USD';
               </button>
             ))}
           </nav>
-
-          {/* Status */}
           <div style={{ padding: '14px 18px', borderTop: '1px solid var(--border)' }}>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--mono)', marginBottom: 6 }}>cryowipes.store</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -532,10 +550,66 @@ const metaCurrency = metaData?.currency || 'USD';
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Realtime overzicht van al je kanalen</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+
+              {/* Live badge */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '6px 12px' }}>
                 <div className="dot dot-green" />
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Live · 30s</span>
               </div>
+
+              {/* 🔔 Notificatiebel */}
+              <div ref={notifRef} style={{ position: 'relative' }}>
+                <button
+                  className={`notif-btn ${alertCount > 0 ? 'has-alerts' : ''}`}
+                  onClick={() => setShowNotifications(!showNotifications)}
+                >
+                  🔔
+                  {alertCount > 0 && (
+                    <span style={{
+                      position: 'absolute', top: -5, right: -5,
+                      background: 'var(--red)', color: '#fff',
+                      borderRadius: '50%', width: 17, height: 17,
+                      fontSize: 9, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', fontWeight: 700, border: '2px solid var(--bg-panel)',
+                    }}>
+                      {alertCount}
+                    </span>
+                  )}
+                </button>
+                {showNotifications && (
+                  <div className="notif-dropdown">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Notificaties</span>
+                      {alertCount > 0 && <span className="badge badge-red">{alertCount} alert{alertCount > 1 ? 's' : ''}</span>}
+                    </div>
+                    {notifications.length === 0 ? (
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>
+                        ✓ Geen meldingen op dit moment
+                      </div>
+                    ) : (
+                      notifications.map((n, i) => (
+                        <div key={i} style={{
+                          padding: '10px 12px',
+                          background: 'var(--bg)',
+                          border: `1px solid ${n.severity === 'critical' ? 'var(--red)' : n.severity === 'warning' ? 'var(--amber)' : 'var(--green)'}40`,
+                          borderRadius: 'var(--radius-sm)',
+                          marginBottom: i < notifications.length - 1 ? 8 : 0,
+                        }}>
+                          <div style={{
+                            fontSize: 12, fontWeight: 600, marginBottom: 4,
+                            color: n.severity === 'critical' ? 'var(--red)' : n.severity === 'warning' ? 'var(--amber)' : 'var(--green)',
+                          }}>
+                            {n.title}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>{n.message}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* AI Agent knop */}
               <button onClick={() => setPage('ai')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--gradient)', border: 'none', borderRadius: 'var(--radius-sm)', padding: '8px 16px', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font)', position: 'relative' }}>
                 ◈ AI Agent
                 {pendingCount > 0 && (
@@ -742,7 +816,7 @@ const metaCurrency = metaData?.currency || 'USD';
                       ))}
                     </div>
                     <a href="https://adsmanager.facebook.com" target="_blank" rel="noreferrer"
-                      style={{ display: 'block', marginTop: 14, padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--cyan)', fontSize: 12, textDecoration: 'none', textAlign: 'center', transition: 'border-color 0.15s' }}>
+                      style={{ display: 'block', marginTop: 14, padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--cyan)', fontSize: 12, textDecoration: 'none', textAlign: 'center' }}>
                       Open Meta Ads Manager ↗
                     </a>
                   </div>
