@@ -408,6 +408,8 @@ export default function Dashboard() {
   const [shopifyData, setShopifyData] = useState<any>(null);
   const [metaData, setMetaData] = useState<any>(null);
   const [pendingActions, setPendingActions] = useState<AIAction[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+const [showNotifications, setShowNotifications] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
