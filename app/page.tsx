@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
-// ─── Styles ────────────────────────────────────────────────────────────────────
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -226,6 +225,13 @@ const css = `
     animation: fadeUp 0.2s ease;
   }
 
+  .upload-zone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 32px; border: 2px dashed var(--border); border-radius: var(--radius);
+    cursor: pointer; gap: 8px; transition: border-color 0.2s, background 0.2s;
+  }
+  .upload-zone:hover { border-color: var(--cyan); background: var(--cyan-dim); }
+
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
@@ -420,6 +426,9 @@ export default function Dashboard() {
   const [pendingActions, setPendingActions] = useState<AIAction[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFileName, setUploadFileName] = useState<string>('');
   const chatRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -434,7 +443,6 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // Sluit notificaties als je buiten klikt
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
@@ -448,6 +456,25 @@ export default function Dashboard() {
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages]);
+
+  async function handleUpload(file: File) {
+    setUploading(true);
+    setUploadFileName(file.name);
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.url) {
+        setUploadedImageUrl(data.url);
+      } else {
+        alert('Upload mislukt: ' + data.error);
+      }
+    } catch {
+      alert('Upload mislukt');
+    }
+    setUploading(false);
+  }
 
   async function approveAction(actionId: string) {
     const action = pendingActions.find(a => a.id === actionId);
@@ -496,7 +523,7 @@ export default function Dashboard() {
   const metaImpressions = metaData?.impressions || '0';
   const metaClicks = metaData?.clicks || '0';
   const metaAmountSpent = metaData?.amount_spent || '0.00';
-const metaCurrency = metaData?.currency || 'USD';
+  const metaCurrency = metaData?.currency || 'USD';
   const pendingCount = pendingActions.filter(a => a.status === 'pending').length;
   const alertCount = notifications.filter(n => n.severity !== 'info').length;
 
@@ -550,28 +577,15 @@ const metaCurrency = metaData?.currency || 'USD';
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Realtime overzicht van al je kanalen</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-
-              {/* Live badge */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '6px 12px' }}>
                 <div className="dot dot-green" />
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Live · 30s</span>
               </div>
-
-              {/* 🔔 Notificatiebel */}
               <div ref={notifRef} style={{ position: 'relative' }}>
-                <button
-                  className={`notif-btn ${alertCount > 0 ? 'has-alerts' : ''}`}
-                  onClick={() => setShowNotifications(!showNotifications)}
-                >
+                <button className={`notif-btn ${alertCount > 0 ? 'has-alerts' : ''}`} onClick={() => setShowNotifications(!showNotifications)}>
                   🔔
                   {alertCount > 0 && (
-                    <span style={{
-                      position: 'absolute', top: -5, right: -5,
-                      background: 'var(--red)', color: '#fff',
-                      borderRadius: '50%', width: 17, height: 17,
-                      fontSize: 9, display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', fontWeight: 700, border: '2px solid var(--bg-panel)',
-                    }}>
+                    <span style={{ position: 'absolute', top: -5, right: -5, background: 'var(--red)', color: '#fff', borderRadius: '50%', width: 17, height: 17, fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, border: '2px solid var(--bg-panel)' }}>
                       {alertCount}
                     </span>
                   )}
@@ -583,24 +597,11 @@ const metaCurrency = metaData?.currency || 'USD';
                       {alertCount > 0 && <span className="badge badge-red">{alertCount} alert{alertCount > 1 ? 's' : ''}</span>}
                     </div>
                     {notifications.length === 0 ? (
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>
-                        ✓ Geen meldingen op dit moment
-                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>✓ Geen meldingen op dit moment</div>
                     ) : (
                       notifications.map((n, i) => (
-                        <div key={i} style={{
-                          padding: '10px 12px',
-                          background: 'var(--bg)',
-                          border: `1px solid ${n.severity === 'critical' ? 'var(--red)' : n.severity === 'warning' ? 'var(--amber)' : 'var(--green)'}40`,
-                          borderRadius: 'var(--radius-sm)',
-                          marginBottom: i < notifications.length - 1 ? 8 : 0,
-                        }}>
-                          <div style={{
-                            fontSize: 12, fontWeight: 600, marginBottom: 4,
-                            color: n.severity === 'critical' ? 'var(--red)' : n.severity === 'warning' ? 'var(--amber)' : 'var(--green)',
-                          }}>
-                            {n.title}
-                          </div>
+                        <div key={i} style={{ padding: '10px 12px', background: 'var(--bg)', border: `1px solid ${n.severity === 'critical' ? 'var(--red)' : n.severity === 'warning' ? 'var(--amber)' : 'var(--green)'}40`, borderRadius: 'var(--radius-sm)', marginBottom: i < notifications.length - 1 ? 8 : 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: n.severity === 'critical' ? 'var(--red)' : n.severity === 'warning' ? 'var(--amber)' : 'var(--green)' }}>{n.title}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>{n.message}</div>
                         </div>
                       ))
@@ -608,8 +609,6 @@ const metaCurrency = metaData?.currency || 'USD';
                   </div>
                 )}
               </div>
-
-              {/* AI Agent knop */}
               <button onClick={() => setPage('ai')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--gradient)', border: 'none', borderRadius: 'var(--radius-sm)', padding: '8px 16px', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font)', position: 'relative' }}>
                 ◈ AI Agent
                 {pendingCount > 0 && (
@@ -848,6 +847,53 @@ const metaCurrency = metaData?.currency || 'USD';
                     <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Geen campagnes gevonden.</div>
                   )}
                 </div>
+
+                {/* ── Upload sectie ── */}
+                <div className="panel" style={{ marginBottom: 16 }}>
+                  <div className="panel-title">📸 Campagne Visual uploaden</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {!uploadedImageUrl ? (
+                      <label className="upload-zone">
+                        <span style={{ fontSize: 32 }}>{uploading ? '⏳' : '📁'}</span>
+                        <span style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 500 }}>
+                          {uploading ? 'Uploaden...' : 'Klik om afbeelding of video te uploaden'}
+                        </span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>JPG, PNG, MP4 — max 100MB</span>
+                        <input type="file" accept="image/*,video/*" style={{ display: 'none' }} disabled={uploading}
+                          onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
+                      </label>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px', background: 'var(--bg)', border: '1px solid var(--green)40', borderRadius: 'var(--radius-sm)' }}>
+                        <div style={{ fontSize: 24 }}>✅</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--green)', marginBottom: 2 }}>Visual geüpload!</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--mono)' }}>{uploadFileName}</div>
+                        </div>
+                        <button className="pill-btn" style={{ fontSize: 11 }} onClick={() => { setUploadedImageUrl(null); setUploadFileName(''); }}>
+                          Verwijderen
+                        </button>
+                      </div>
+                    )}
+                    {uploadedImageUrl && (
+                      <div style={{ padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Cloudinary URL:</div>
+                        <div style={{ fontSize: 11, color: 'var(--cyan)', fontFamily: 'var(--mono)', wordBreak: 'break-all' }}>{uploadedImageUrl}</div>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => {
+                        const prompt = uploadedImageUrl
+                          ? `Maak een Meta campagne aan voor CryoWipes met deze afbeelding URL: ${uploadedImageUrl}. Landingspagina: https://cryowipes.store/products/cryo-wipe-box. Budget: $20/dag. Targeting: USA en Canada, 18-45 jaar.`
+                          : 'Maak een Meta campagne aan voor CryoWipes. Landingspagina: https://cryowipes.store/products/cryo-wipe-box. Budget: $20/dag. Targeting: USA en Canada, 18-45 jaar.';
+                        setInput(prompt);
+                        setPage('ai');
+                      }}
+                      style={{ padding: '12px', background: 'var(--gradient)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'var(--font)' }}>
+                      ◈ {uploadedImageUrl ? 'AI campagne aanmaken met deze visual' : 'AI campagne aanmaken zonder visual'}
+                    </button>
+                  </div>
+                </div>
+
                 <div className="panel">
                   <div className="panel-title">◈ AI Inzichten</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
