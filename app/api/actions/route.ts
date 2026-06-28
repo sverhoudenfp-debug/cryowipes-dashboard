@@ -228,13 +228,19 @@ targeting: {
         creativeBody.object_story_spec.instagram_actor_id = INSTAGRAM_ACTOR_ID;
       }
 
-      if (image_url) {
-        if (image_url.includes('.mp4') || image_url.includes('video')) {
-          creativeBody.object_story_spec.link_data.video_id = image_url;
-        } else {
-          creativeBody.object_story_spec.link_data.picture = image_url;
-        }
-      }
+if (image_url) {
+  if (image_url.includes('.mp4') || image_url.includes('video')) {
+    delete creativeBody.object_story_spec.link_data;
+    creativeBody.object_story_spec.video_data = {
+      video_url: image_url,
+      message: ad_body || 'Stay cool anywhere with CryoWipes.',
+      link: ad_url,
+      call_to_action: { type: 'SHOP_NOW', value: { link: ad_url } },
+    };
+  } else {
+    creativeBody.object_story_spec.link_data.picture = image_url;
+  }
+}
 
       const creativeRes = await fetch(`https://graph.facebook.com/v20.0/${AD_ACCOUNT_ID}/adcreatives`, {
         method: 'POST',
