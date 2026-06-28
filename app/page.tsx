@@ -202,28 +202,21 @@ const css = `
   .chat-send:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
 
   /* ── AI Side Panel ── */
-  .ai-panel-overlay {
-    position: fixed; inset: 0;
-    background: #00000060;
-    backdrop-filter: blur(2px);
-    z-index: 49;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-  }
-  .ai-panel-overlay.open { opacity: 1; pointer-events: all; }
   .ai-side-panel {
-    position: fixed; top: 0; right: 0; bottom: 0;
-    width: 380px;
+    width: 0;
+    min-width: 0;
     background: var(--bg-panel);
-    border-left: 1px solid var(--border);
-    z-index: 50;
+    border-left: 0px solid var(--border);
     display: flex; flex-direction: column;
-    transform: translateX(100%);
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: -8px 0 48px #00000080;
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-left-width 0.35s;
   }
-  .ai-side-panel.open { transform: translateX(0); }
+  .ai-side-panel.open {
+    width: 360px;
+    min-width: 360px;
+    border-left-width: 1px;
+  }
   .ai-panel-header {
     padding: 20px 20px 16px;
     border-bottom: 1px solid var(--border);
@@ -1046,11 +1039,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── AI Side Panel Overlay ── */}
-        <div className={`ai-panel-overlay ${aiOpen ? 'open' : ''}`} onClick={() => setAiOpen(false)} />
-
         {/* ── AI Side Panel ── */}
         <div className={`ai-side-panel ${aiOpen ? 'open' : ''}`}>
+          <div style={{ width: 360, display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0 }}>
           {/* Header */}
           <div className="ai-panel-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1096,19 +1087,18 @@ export default function Dashboard() {
               maxHeight={9999}
             />
           </div>
+          </div>
         </div>
 
         {/* ── Floating AI Button ── */}
-        {!aiOpen && (
-          <button className={`ai-fab ${aiOpen ? 'open' : ''}`} onClick={() => setAiOpen(true)} title="AI Agent openen">
-            ◈
-            {pendingCount > 0 && (
-              <span style={{ position: 'absolute', top: -4, right: -4, background: 'var(--amber)', color: '#000', borderRadius: '50%', width: 18, height: 18, fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, border: '2px solid var(--bg)' }}>
-                {pendingCount}
-              </span>
-            )}
-          </button>
-        )}
+        <button className={`ai-fab ${aiOpen ? 'open' : ''}`} onClick={() => setAiOpen(!aiOpen)} title={aiOpen ? 'AI Agent sluiten' : 'AI Agent openen'}>
+          {aiOpen ? '✕' : '◈'}
+          {!aiOpen && pendingCount > 0 && (
+            <span style={{ position: 'absolute', top: -4, right: -4, background: 'var(--amber)', color: '#000', borderRadius: '50%', width: 18, height: 18, fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, border: '2px solid var(--bg)' }}>
+              {pendingCount}
+            </span>
+          )}
+        </button>
       </div>
     </>
   );
