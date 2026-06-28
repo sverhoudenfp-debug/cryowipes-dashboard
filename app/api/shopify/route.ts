@@ -14,18 +14,55 @@ async function getShopifyToken() {
   return data.access_token;
 }
 
-export async function GET() {
+function getPeriodStart(period: string): Date {
+  const now = new Date();
+  switch (period) {
+    case 'today': {
+      const d = new Date(now); d.setHours(0, 0, 0, 0); return d;
+    }
+    case 'yesterday': {
+      const d = new Date(now); d.setDate(d.getDate() - 1); d.setHours(0, 0, 0, 0); return d;
+    }
+    case 'last_7d': {
+      const d = new Date(now); d.setDate(d.getDate() - 7); d.setHours(0, 0, 0, 0); return d;
+    }
+    case 'last_30d': {
+      const d = new Date(now); d.setDate(d.getDate() - 30); d.setHours(0, 0, 0, 0); return d;
+    }
+    default: {
+      const d = new Date(now); d.setDate(d.getDate() - 7); d.setHours(0, 0, 0, 0); return d;
+    }
+  }
+}
+
+function getPeriodEnd(period: string): Date | null {
+  if (period === 'yesterday') {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }
+  return null; // null = up to now
+}
+
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const period = searchParams.get('period') || 'last_7d';
+
     const token = await getShopifyToken();
     const headers = { 'X-Shopify-Access-Token': token };
     const base = `https://${process.env.SHOPIFY_STORE}.myshopify.com/admin/api/2024-01`;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString();
+    const periodStart = getPeriodStart(period);
+    const periodEnd = getPeriodEnd(period);
+
+    // Always fetch today for todayOrders/todayRevenue
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
     const [ordersRes, productsRes, customersRes] = await Promise.all([
-      fetch(`${base}/orders.json?status=any&limit=250`, { headers }),
+      fetch(`${base}/orders.json?status=any&limit=250&created_at_min=${periodStart.toISOString()}`, { headers }),
       fetch(`${base}/products.json?limit=50`, { headers }),
       fetch(`${base}/customers.json?limit=50`, { headers }),
     ]);
@@ -36,11 +73,17 @@ export async function GET() {
       customersRes.json(),
     ]);
 
-    const orders = ordersData.orders || [];
+    let orders = ordersData.orders || [];
     const products = productsData.products || [];
     const customers = customersData.customers || [];
 
-    const todayOrders = orders.filter((o: any) => new Date(o.created_at) >= today);
+    // Filter by period end if yesterday
+    if (periodEnd) {
+      orders = orders.filter((o: any) => new Date(o.created_at) <= periodEnd!);
+    }
+
+    // Today stats (always based on actual today)
+    const todayOrders = orders.filter((o: any) => new Date(o.created_at) >= todayStart);
     const todayRevenue = todayOrders.reduce((sum: number, o: any) => sum + parseFloat(o.total_price || '0'), 0);
 
     const totalRevenue = orders.reduce((sum: number, o: any) => sum + parseFloat(o.total_price || '0'), 0);
