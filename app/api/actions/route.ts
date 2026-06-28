@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const PAGE_ID = '61590315366201';
-const INSTAGRAM_ACTOR_ID = '24292588933773149';
+const INSTAGRAM_ACTOR_ID = '17841476755087605';
 const AD_ACCOUNT_ID = 'act_1315459333262567';
 const PIXEL_ID = process.env.META_PIXEL_ID || '';
 
