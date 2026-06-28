@@ -1,12 +1,24 @@
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const period = searchParams.get('period') || 'today';
+
     const token = process.env.META_ACCESS_TOKEN;
     const accountId = 'act_1315459333262567';
 
+    // Map period to Meta date_preset
+    const presetMap: Record<string, string> = {
+      today: 'today',
+      yesterday: 'yesterday',
+      last_7d: 'last_7d',
+      last_30d: 'last_30d',
+    };
+    const datePreset = presetMap[period] || 'today';
+
     const [insightsRes, campaignsRes, accountRes] = await Promise.all([
-      fetch(`https://graph.facebook.com/v20.0/${accountId}/insights?fields=spend,impressions,clicks,ctr,cpc&date_preset=today&access_token=${token}`),
+      fetch(`https://graph.facebook.com/v20.0/${accountId}/insights?fields=spend,impressions,clicks,ctr,cpc&date_preset=${datePreset}&access_token=${token}`),
       fetch(`https://graph.facebook.com/v20.0/${accountId}/campaigns?fields=id,name,status,daily_budget,lifetime_budget&access_token=${token}`),
       fetch(`https://graph.facebook.com/v20.0/${accountId}?fields=currency,amount_spent&access_token=${token}`),
     ]);
