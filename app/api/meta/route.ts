@@ -6,7 +6,7 @@ export async function GET() {
     const accountId = 'act_1315459333262567';
 
     const [insightsRes, campaignsRes, accountRes] = await Promise.all([
-      fetch(`https://graph.facebook.com/v20.0/${accountId}/insights?fields=spend,impressions,clicks,ctr,cpc&date_preset=last_7d&access_token=${token}`),
+      fetch(`https://graph.facebook.com/v20.0/${accountId}/insights?fields=spend,impressions,clicks,ctr,cpc&date_preset=today&access_token=${token}`),
       fetch(`https://graph.facebook.com/v20.0/${accountId}/campaigns?fields=id,name,status,daily_budget,lifetime_budget&access_token=${token}`),
       fetch(`https://graph.facebook.com/v20.0/${accountId}?fields=currency,amount_spent&access_token=${token}`),
     ]);
