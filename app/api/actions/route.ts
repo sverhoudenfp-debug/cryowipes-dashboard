@@ -156,14 +156,14 @@ export async function POST(request: NextRequest) {
       const campaignRes = await fetch(`https://graph.facebook.com/v20.0/${AD_ACCOUNT_ID}/campaigns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-  name: campaign_name,
-  objective,
-  status: 'PAUSED',
-  special_ad_categories: [],
-  is_adset_budget_sharing_enabled: false,
-  access_token: metaToken,
-}),
+        body: JSON.stringify({
+          name: campaign_name,
+          objective,
+          status: 'PAUSED',
+          special_ad_categories: [],
+          is_adset_budget_sharing_enabled: false,
+          access_token: metaToken,
+        }),
       });
       const campaignData = await campaignRes.json();
       if (campaignData.error) {
@@ -172,13 +172,14 @@ body: JSON.stringify({
       }
       const campaign_id = campaignData.id;
 
-      // Stap 2: Ad set aanmaken — met pixel als die beschikbaar is
+      // Stap 2: Ad set aanmaken
       const adSetBody: any = {
         name: `${campaign_name} - Ad Set`,
         campaign_id,
         daily_budget: daily_budget * 100,
         billing_event: 'IMPRESSIONS',
         optimization_goal: PIXEL_ID ? 'OFFSITE_CONVERSIONS' : 'LINK_CLICKS',
+        bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
         targeting: {
           geo_locations: { countries: targeting_countries },
           age_min,
@@ -188,7 +189,6 @@ body: JSON.stringify({
         access_token: metaToken,
       };
 
-      // Pixel toevoegen als beschikbaar
       if (PIXEL_ID) {
         adSetBody.promoted_object = {
           pixel_id: PIXEL_ID,
@@ -223,12 +223,10 @@ body: JSON.stringify({
         access_token: metaToken,
       };
 
-      // Instagram toevoegen
       if (INSTAGRAM_ACTOR_ID) {
         creativeBody.object_story_spec.instagram_actor_id = INSTAGRAM_ACTOR_ID;
       }
 
-      // Afbeelding of video toevoegen
       if (image_url) {
         if (image_url.includes('.mp4') || image_url.includes('video')) {
           creativeBody.object_story_spec.link_data.video_id = image_url;
