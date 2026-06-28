@@ -211,19 +211,21 @@ export async function POST(request: NextRequest) {
 
       // Stap 3: Creative aanmaken — alleen afbeeldingen ondersteund via API
       // Video's moeten handmatig worden toegevoegd in Meta Ads Manager
-      const creativeBody: any = {
-        name: `${campaign_name} - Creative`,
-        object_story_spec: {
-          page_id: PAGE_ID,
-          link_data: {
-            message: ad_body || 'Stay cool anywhere with CryoWipes — instant cooling wipes for skin relief.',
-            link: ad_url,
-            name: ad_headline || 'Stay Cool Anywhere',
-            call_to_action: { type: 'SHOP_NOW', value: { link: ad_url } },
-          },
-        },
-        access_token: metaToken,
-      };
+const creativeBody: any = {
+  name: `${campaign_name} - Creative`,
+  object_story_spec: {
+    page_id: PAGE_ID,
+    link_data: {
+      message: ad_body || 'Stay cool anywhere with CryoWipes — instant cooling wipes for skin relief.',
+      link: ad_url,
+      name: ad_headline || 'Stay Cool Anywhere',
+      description: 'Shop now at cryowipes.store',
+      call_to_action: { type: 'SHOP_NOW', value: { link: ad_url } },
+      attachment_style: 'link',
+    },
+  },
+  access_token: metaToken,
+};
 
       if (INSTAGRAM_ACTOR_ID) {
         creativeBody.object_story_spec.instagram_actor_id = INSTAGRAM_ACTOR_ID;
