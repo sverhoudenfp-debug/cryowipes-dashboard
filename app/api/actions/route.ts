@@ -227,9 +227,9 @@ const creativeBody: any = {
   access_token: metaToken,
 };
 
-      if (INSTAGRAM_ACTOR_ID) {
-        creativeBody.object_story_spec.instagram_actor_id = INSTAGRAM_ACTOR_ID;
-      }
+if (INSTAGRAM_ACTOR_ID) {
+  creativeBody.object_story_spec.instagram_user_id = INSTAGRAM_ACTOR_ID;
+}
 
       // Alleen afbeeldingen toevoegen (geen video via URL)
       if (image_url && !image_url.includes('.mp4') && !image_url.includes('video')) {
