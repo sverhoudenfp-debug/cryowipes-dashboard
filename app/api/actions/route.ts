@@ -209,13 +209,18 @@ export async function POST(request: NextRequest) {
       }
       const adset_id = adSetData.id;
 
-      // Stap 3: Creative aanmaken
-      const isVideo = image_url && (image_url.includes('.mp4') || image_url.includes('video'));
-
+      // Stap 3: Creative aanmaken — alleen afbeeldingen ondersteund via API
+      // Video's moeten handmatig worden toegevoegd in Meta Ads Manager
       const creativeBody: any = {
         name: `${campaign_name} - Creative`,
         object_story_spec: {
           page_id: PAGE_ID,
+          link_data: {
+            message: ad_body || 'Stay cool anywhere with CryoWipes — instant cooling wipes for skin relief.',
+            link: ad_url,
+            name: ad_headline || 'Stay Cool Anywhere',
+            call_to_action: { type: 'SHOP_NOW', value: { link: ad_url } },
+          },
         },
         access_token: metaToken,
       };
@@ -224,25 +229,9 @@ export async function POST(request: NextRequest) {
         creativeBody.object_story_spec.instagram_actor_id = INSTAGRAM_ACTOR_ID;
       }
 
-      if (isVideo) {
-        // Video advertentie
-        creativeBody.object_story_spec.video_data = {
-          video_url: image_url,
-          message: ad_body || 'Stay cool anywhere with CryoWipes — instant cooling wipes for skin relief.',
-          link_description: ad_headline || 'Stay Cool Anywhere',
-          call_to_action: { type: 'SHOP_NOW', value: { link: ad_url } },
-        };
-      } else {
-        // Afbeelding advertentie (of geen afbeelding)
-        creativeBody.object_story_spec.link_data = {
-          message: ad_body || 'Stay cool anywhere with CryoWipes — instant cooling wipes for skin relief.',
-          link: ad_url,
-          name: ad_headline || 'Stay Cool Anywhere',
-          call_to_action: { type: 'SHOP_NOW', value: { link: ad_url } },
-        };
-        if (image_url) {
-          creativeBody.object_story_spec.link_data.picture = image_url;
-        }
+      // Alleen afbeeldingen toevoegen (geen video via URL)
+      if (image_url && !image_url.includes('.mp4') && !image_url.includes('video')) {
+        creativeBody.object_story_spec.link_data.picture = image_url;
       }
 
       const creativeRes = await fetch(`https://graph.facebook.com/v20.0/${AD_ACCOUNT_ID}/adcreatives`, {
@@ -281,7 +270,7 @@ export async function POST(request: NextRequest) {
           adset_id,
           creative_id: creativeData.id,
           ad_id: adData.id,
-          message: `Campagne "${campaign_name}" aangemaakt! Staat op PAUSED — activeer hem in Meta Ads Manager.`,
+          message: `Campagne "${campaign_name}" aangemaakt! Staat op PAUSED — activeer hem in Meta Ads Manager. Let op: video's moeten handmatig worden toegevoegd in Meta Ads Manager.`,
         },
       });
     }
