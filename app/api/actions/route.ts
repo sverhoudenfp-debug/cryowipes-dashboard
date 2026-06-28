@@ -180,12 +180,12 @@ export async function POST(request: NextRequest) {
         billing_event: 'IMPRESSIONS',
         optimization_goal: PIXEL_ID ? 'OFFSITE_CONVERSIONS' : 'LINK_CLICKS',
         bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-targeting: {
-  geo_locations: { countries: targeting_countries },
-  age_min,
-  age_max,
-  targeting_automation: { advantage_audience: 0 },
-},
+        targeting: {
+          geo_locations: { countries: targeting_countries },
+          age_min,
+          age_max,
+          targeting_automation: { advantage_audience: 0 },
+        },
         status: 'PAUSED',
         access_token: metaToken,
       };
@@ -210,16 +210,12 @@ targeting: {
       const adset_id = adSetData.id;
 
       // Stap 3: Creative aanmaken
+      const isVideo = image_url && (image_url.includes('.mp4') || image_url.includes('video'));
+
       const creativeBody: any = {
         name: `${campaign_name} - Creative`,
         object_story_spec: {
           page_id: PAGE_ID,
-          link_data: {
-            message: ad_body || 'Stay cool anywhere with CryoWipes — instant cooling wipes for skin relief.',
-            link: ad_url,
-            name: ad_headline || 'Stay Cool Anywhere',
-            call_to_action: { type: 'SHOP_NOW', value: { link: ad_url } },
-          },
         },
         access_token: metaToken,
       };
@@ -228,19 +224,26 @@ targeting: {
         creativeBody.object_story_spec.instagram_actor_id = INSTAGRAM_ACTOR_ID;
       }
 
-if (image_url) {
-  if (image_url.includes('.mp4') || image_url.includes('video')) {
-    delete creativeBody.object_story_spec.link_data;
-    creativeBody.object_story_spec.video_data = {
-      video_url: image_url,
-      message: ad_body || 'Stay cool anywhere with CryoWipes.',
-      link: ad_url,
-      call_to_action: { type: 'SHOP_NOW', value: { link: ad_url } },
-    };
-  } else {
-    creativeBody.object_story_spec.link_data.picture = image_url;
-  }
-}
+      if (isVideo) {
+        // Video advertentie
+        creativeBody.object_story_spec.video_data = {
+          video_url: image_url,
+          message: ad_body || 'Stay cool anywhere with CryoWipes — instant cooling wipes for skin relief.',
+          link_description: ad_headline || 'Stay Cool Anywhere',
+          call_to_action: { type: 'SHOP_NOW', value: { link: ad_url } },
+        };
+      } else {
+        // Afbeelding advertentie (of geen afbeelding)
+        creativeBody.object_story_spec.link_data = {
+          message: ad_body || 'Stay cool anywhere with CryoWipes — instant cooling wipes for skin relief.',
+          link: ad_url,
+          name: ad_headline || 'Stay Cool Anywhere',
+          call_to_action: { type: 'SHOP_NOW', value: { link: ad_url } },
+        };
+        if (image_url) {
+          creativeBody.object_story_spec.link_data.picture = image_url;
+        }
+      }
 
       const creativeRes = await fetch(`https://graph.facebook.com/v20.0/${AD_ACCOUNT_ID}/adcreatives`, {
         method: 'POST',
