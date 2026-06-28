@@ -180,12 +180,12 @@ export async function POST(request: NextRequest) {
         billing_event: 'IMPRESSIONS',
         optimization_goal: PIXEL_ID ? 'OFFSITE_CONVERSIONS' : 'LINK_CLICKS',
         bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-        targeting_automation: { advantage_audience: 0 },
-        targeting: {
-          geo_locations: { countries: targeting_countries },
-          age_min,
-          age_max,
-        },
+targeting: {
+  geo_locations: { countries: targeting_countries },
+  age_min,
+  age_max,
+  targeting_automation: { advantage_audience: 0 },
+},
         status: 'PAUSED',
         access_token: metaToken,
       };
