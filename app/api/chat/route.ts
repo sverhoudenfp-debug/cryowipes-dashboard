@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { getWorkspaceId, proposeAction } from '@/lib/db';
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -322,6 +323,29 @@ ACTION_JSON:{"type":"ACTIE_TYPE","description":"Uitleg","payload":{...}}`;
     }
 
     const cleanText = text.replace(/ACTION_JSON:\{[\s\S]*\}/, '').trim();
+
+    // ── Sla voorgestelde actie persistent op in Supabase (de "brain") ──
+    if (action) {
+      try {
+        const wsId = await getWorkspaceId('cryowipes');
+        const platformMap: Record<string, 'meta' | 'shopify'> = {
+          pause_campaign: 'meta', resume_campaign: 'meta',
+          update_campaign_budget: 'meta', create_full_campaign: 'meta',
+          update_product_title: 'shopify', update_product_price: 'shopify',
+          update_inventory: 'shopify',
+        };
+        await proposeAction({
+          workspaceId: wsId,
+          title: action.description || action.type,
+          description: action.description || '',
+          platform: platformMap[action.type] || 'internal',
+          operation: action.type,
+          params: action.payload || {},
+        });
+      } catch (e) {
+        console.error('Kon actie niet opslaan:', e);
+      }
+    }
 
     return NextResponse.json({ content: cleanText, action });
   } catch (error: any) {
