@@ -30,7 +30,7 @@ ELK ADVIES BEVAT:
 
 Prioriteer altijd op impact: het duurste probleem eerst. Wees concreet en beknopt. Antwoord in de taal van de gebruiker.`;
 
-type Msg = Anthropic.Messages.MessageParam;
+type Msg = any;
 
 export async function runAgent(opts: {
   workspaceSlug: string;
@@ -56,9 +56,9 @@ export async function runAgent(opts: {
 
     const customToolUses = res.content.filter(
       (b: any) => b.type === "tool_use"
-    ) as Anthropic.Messages.ToolUseBlock[];
+    ) as any[];
 
-    convo.push({ role: "assistant", content: res.content });
+    convo.push({ role: "assistant", content: res.content as any });
 
     if (res.stop_reason !== "tool_use" || customToolUses.length === 0) {
       const text = res.content
@@ -69,11 +69,11 @@ export async function runAgent(opts: {
       return { text, messages: convo, stopReason: res.stop_reason };
     }
 
-    const toolResults = [];
+    const toolResults: any[] = [];
     for (const tu of customToolUses) {
       const output = await runBrainTool(workspaceId, tu.name, tu.input);
       toolResults.push({
-        type: "tool_result" as const,
+        type: "tool_result",
         tool_use_id: tu.id,
         content: output,
       });
